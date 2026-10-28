@@ -1,0 +1,751 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Z-Game: Học Tăng Cường Cho Kẻ Địch Trong FPS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Roboto+Condensed:wght@300;400;500;700&family=Roboto+Mono:wght@400;500;700&family=STIX+Two+Text:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#050304; --red:#ff4a3a; --red2:#ff6a55; --deep:#7a0f14; --green:#37e08a; --steel:#5f7f99;
+  --ink:#f4f1ec; --mute:#a9a9a9; --panel:#0a0507;
+  --d:'Chakra Petch','Rajdhani',sans-serif; --c:'Roboto Condensed','Arial Narrow',sans-serif; --m:'Roboto Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#000;overflow:hidden;color:var(--ink);font-family:var(--c)}
+#stage{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;background:var(--bg);overflow:hidden}
+.slide{position:absolute;inset:0;opacity:0;visibility:hidden;transition:opacity .55s ease,visibility 0s .55s;
+  background:radial-gradient(ellipse 75% 65% at 50% 42%,#1c0609 0%,#0a0305 55%,#040203 100%)}
+.slide.active{opacity:1;visibility:visible;transition:opacity .55s ease}
+.slide::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:linear-gradient(rgba(255,70,60,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,70,60,.045) 1px,transparent 1px);background-size:64px 64px;
+  -webkit-mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,#000 30%,transparent 100%);mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,#000 30%,transparent 100%)}
+.slide::after{content:"";position:absolute;left:0;right:0;top:-6%;height:90px;pointer-events:none;
+  background:linear-gradient(180deg,transparent,rgba(255,80,70,.07),transparent);animation:sweep 7s linear infinite}
+@keyframes sweep{to{transform:translateY(1200px)}}
+.fxs{position:absolute;inset:0;pointer-events:none;z-index:50;background:repeating-linear-gradient(0deg,rgba(255,255,255,.022) 0 1px,transparent 1px 3px);mix-blend-mode:overlay}
+.fxv{position:absolute;inset:0;pointer-events:none;z-index:49;background:radial-gradient(ellipse at 50% 50%,transparent 55%,rgba(0,0,0,.6) 100%)}
+.cr{position:absolute;width:62px;height:62px;border:0 solid var(--red);z-index:40;pointer-events:none;filter:drop-shadow(0 0 8px rgba(255,74,58,.7))}
+.cr.a{left:26px;top:26px;border-width:4px 0 0 4px}.cr.b{right:26px;top:26px;border-width:4px 4px 0 0}
+.cr.c{left:26px;bottom:26px;border-width:0 0 4px 4px}.cr.d{right:26px;bottom:26px;border-width:0 4px 4px 0}
+
+/* reveal */
+[data-a]{opacity:0;transform:translateY(30px);transition:opacity .75s cubic-bezier(.2,.7,.2,1),transform .75s cubic-bezier(.2,.7,.2,1);transition-delay:calc(var(--i,0)*85ms + 200ms)}
+.active [data-a]{opacity:1;transform:none}
+[data-a=l]{transform:translateX(-70px)}[data-a=r]{transform:translateX(70px)}[data-a=z]{transform:scale(.9)}
+.active [data-a=l],.active [data-a=r],.active [data-a=z]{transform:none}
+
+/* shared */
+.ttl{position:absolute;left:96px;top:58px;font:700 64px/1.1 var(--d);letter-spacing:.005em;text-shadow:0 0 30px rgba(255,74,58,.25)}
+.ttl.acc{padding-left:30px}.ttl.acc::before{content:"";position:absolute;left:0;top:6px;bottom:6px;width:9px;background:var(--red);box-shadow:0 0 14px var(--red)}
+.lead{position:absolute;left:96px;right:96px;top:158px;font:400 34px/1.22 var(--c);color:#b9b9b9}
+.mono{font-family:var(--m)}
+svg{font-family:var(--c)}
+.hr{position:absolute;left:96px;width:880px;height:2px;background:linear-gradient(90deg,var(--red),transparent)}
+.note{position:absolute;display:flex;align-items:center;padding:0 40px;background:linear-gradient(90deg,rgba(255,255,255,.07),rgba(255,255,255,.03));border-left:7px solid var(--red);border-right:3px solid var(--red);font:400 38px/1.25 var(--c);color:#eee;box-shadow:inset 0 0 40px rgba(255,74,58,.08)}
+.note b{font-weight:500;color:#fff}.note u{text-decoration:none;color:#aaa}
+.cham{position:absolute;--cc:var(--red);--bgc:var(--panel);--cp:0 0,calc(100% - 28px) 0,100% 28px,100% 100%,28px 100%,0 calc(100% - 28px);filter:drop-shadow(0 0 12px rgba(255,74,58,.55))}
+.cham::before{content:"";position:absolute;inset:0;background:var(--cc);clip-path:polygon(var(--cp))}
+.cham::after{content:"";position:absolute;inset:2.5px;background:var(--bgc);clip-path:polygon(var(--cp))}
+.cham>.in{position:relative;z-index:2;height:100%}
+.cham.g{--cc:var(--green);filter:drop-shadow(0 0 12px rgba(55,224,138,.5))}
+.cham.w{--cc:#d8d8d8;filter:drop-shadow(0 0 8px rgba(255,255,255,.25))}
+.cham.r2{--cp:28px 0,100% 0,100% calc(100% - 28px),calc(100% - 28px) 100%,0 100%,0 28px}
+.box{position:absolute;border:2px solid var(--red);background:rgba(10,5,7,.88);box-shadow:0 0 18px rgba(255,74,58,.35),inset 0 0 22px rgba(255,74,58,.08)}
+.bk{position:absolute;width:24px;height:24px;border:0 solid var(--red)}
+.bk.a{left:6px;top:6px;border-width:3px 0 0 3px}.bk.b{right:6px;top:6px;border-width:3px 3px 0 0}.bk.c{left:6px;bottom:6px;border-width:0 0 3px 3px}.bk.d{right:6px;bottom:6px;border-width:0 3px 3px 0}
+.flow{stroke-dasharray:12 12;animation:dash 1s linear infinite}
+@keyframes dash{to{stroke-dashoffset:-24}}
+.ln{fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset 2.2s .5s cubic-bezier(.4,0,.2,1)}
+.active .ln{stroke-dashoffset:0}
+.fade{opacity:0;transition:opacity .6s 1.9s}.active .fade{opacity:1}
+.bar{transform-box:fill-box;transform-origin:bottom;transform:scaleY(0);transition:transform 1s cubic-bezier(.2,.8,.2,1);transition-delay:calc(var(--i)*60ms + 500ms)}
+.bar.neg{transform-origin:top}.active .bar{transform:scaleY(1)}
+.pulse{animation:pls 2s ease-in-out infinite}@keyframes pls{50%{opacity:.35}}
+.spin{transform-box:fill-box;transform-origin:center;animation:spin 18s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+.spin2{transform-box:fill-box;transform-origin:center;animation:spin 30s linear infinite reverse}
+.blink{animation:bl 1.1s steps(2) infinite}@keyframes bl{50%{opacity:0}}
+
+/* S1 */
+.t1{position:absolute;left:165px;top:170px;width:1050px;font:700 106px/1.14 var(--d);text-shadow:0 0 50px rgba(255,74,58,.18)}
+.rule1{position:absolute;left:153px;top:643px;width:980px;height:3px;background:var(--red);box-shadow:0 0 16px var(--red);transform-origin:left}
+.sub1{position:absolute;left:165px;top:686px;width:1000px;font:400 38px/1.3 var(--m);color:#9c9c9c;letter-spacing:.02em}
+.team1{position:absolute;left:165px;top:906px;width:1050px;font:400 25px/1.3 var(--m);color:#8f8f8f;letter-spacing:.03em}
+.tgt{position:absolute;left:1220px;top:96px;width:600px;height:860px}
+
+/* S2 */
+.pnl{position:absolute;top:283px;width:840px;height:527px;overflow:hidden}
+.pnl h3{position:absolute;left:0;right:0;top:22px;text-align:center;font:500 38px var(--c)}
+.hc{position:absolute;left:220px;width:400px;height:78px;background:#27404f;border:2px solid #5f7f99;display:flex;align-items:center;justify-content:center;font:400 35px var(--c);color:#e9f0f5;box-shadow:0 0 14px rgba(95,127,153,.3)}
+.hcA{position:absolute;left:408px;width:24px;height:46px}
+.dk{position:absolute;background:repeating-linear-gradient(0deg,rgba(95,127,153,.35) 0 2px,transparent 2px 9px);border:1px solid rgba(95,127,153,.4)}
+.eq{position:absolute;display:flex;gap:3px;align-items:flex-end;height:60px}
+.eq i{display:block;width:5px;background:#ff5a4a;animation:eq 1.2s ease-in-out infinite}
+@keyframes eq{0%,100%{height:12px}50%{height:56px}}
+
+/* S4 */
+.tbw{position:absolute;left:155px;top:240px;width:1610px}
+table{border-collapse:collapse;width:100%;background:rgba(10,6,8,.72)}
+td,th{border:1px solid #4a4a4a;padding:12px 22px;font:300 34px/1.2 var(--c);color:#e6e6e6;vertical-align:middle}
+th{font:700 41px var(--c);height:92px;border-bottom:3px solid var(--red)}
+td.h{font:500 34px/1.2 var(--c);text-align:center;color:#fff;width:272px;border-left:1px solid #4a4a4a}
+td.h span{font-weight:300;display:block}
+.R{color:#ff6a55;font-weight:500}.W{color:#d8d8d8;font-weight:500}
+.vl{position:absolute;left:940px;top:0;bottom:0;width:6px;background:linear-gradient(180deg,var(--red),#ff9a7a,var(--red));box-shadow:0 0 18px var(--red);z-index:3}
+
+/* S5 */
+.call{position:absolute;font:400 30px/1.26 var(--c);color:#f0e8e4}
+.call h4{font:700 32px var(--c);margin-bottom:4px;color:#fff}
+.call .in{padding:14px 22px 14px 20px}
+.as{position:absolute;left:1390px;top:285px;width:444px;height:590px;border:3px solid var(--red);background:rgba(12,5,8,.85);box-shadow:0 0 22px rgba(255,74,58,.55),inset 0 0 30px rgba(255,74,58,.08);text-align:center}
+.as h4{font:700 30px/1.3 var(--m);margin-top:30px}
+.as .gb{margin:0 26px;padding:24px 10px;background:#232426;border:2px solid #4a4a4a;font:400 31px/1.35 var(--m)}
+
+/* S6 */
+.rc{position:absolute;left:1290px;width:540px;border-left:8px solid var(--red);background:rgba(8,3,5,.92);box-shadow:0 0 18px rgba(255,74,58,.45);border-top:2px solid var(--red);border-right:2px solid var(--red);border-bottom:2px solid var(--red)}
+.rc.g{border-color:var(--green);box-shadow:0 0 18px rgba(55,224,138,.45)}
+.rc h4{font:700 34px var(--c);color:#ff6a55;padding:14px 22px 0 28px}.rc.g h4{color:#5bf0a0}
+.rc p{font:400 31px/1.3 var(--c);padding:0 22px 0 30px}.rc p b{font-weight:700;color:#ff6a55;font-size:33px}.rc.g p b{color:#5bf0a0}
+.rc .ft{background:#202020;color:#aaa;font:400 27px/1.3 var(--c);padding:10px 22px 12px 30px;margin-top:8px}
+
+/* S7 */
+.net{position:absolute;left:100px;width:840px;height:262px;border:2px solid #cfcfcf;background:rgba(10,6,8,.6)}
+.net h4{position:absolute;left:34px;top:30px;font:500 29px var(--m);letter-spacing:.06em}
+.nn{position:absolute;top:105px;height:106px;width:156px;border:3px solid #e9e9e9;border-radius:22px;display:flex;align-items:center;justify-content:center;text-align:center;font:400 26px/1.15 var(--c);box-shadow:0 0 14px rgba(255,255,255,.3)}
+.nn.r{border-color:#ff8a7c;box-shadow:0 0 16px rgba(255,74,58,.55),inset 0 0 10px rgba(255,74,58,.3)}
+.nn small{display:block;font-size:23px;color:#ddd}
+.na{position:absolute;top:156px;width:34px;height:2px;background:#e9e9e9}.na::after{content:"";position:absolute;right:-1px;top:-5px;border:6px solid transparent;border-left:10px solid #e9e9e9}
+.fm{font:400 50px/1.55 'STIX Two Text','Times New Roman',serif;color:#f4efe9;padding:34px 34px}
+.hp{position:absolute;left:1020px;top:618px;width:812px;border:2px solid #cfcfcf;padding:14px}
+.hp div{border:2px solid #e4e4e4;border-top:0;padding:8px 14px;font:500 28px var(--m);white-space:nowrap}
+.hp div:first-child{border-top:2px solid #e4e4e4;font-weight:700}.hp b{font-weight:700}
+
+/* S8 */
+.env{position:absolute;top:190px;width:810px;height:712px}
+.env h3{position:absolute;left:0;right:0;top:34px;text-align:center;font:400 34px var(--m);white-space:nowrap}
+.env h3 b{font-weight:700}.env h3 span{font:400 34px var(--c)}
+.env .v{position:absolute;left:24px;top:88px;width:762px;height:372px;border:2px solid #555;background:rgba(0,0,0,.55);overflow:hidden}
+.env ul{position:absolute;left:36px;top:474px;width:740px;list-style:none;font:400 29px/1.25 var(--c)}
+.env li{padding-left:30px;position:relative;margin-bottom:6px}.env li::before{content:"•";position:absolute;left:6px;color:#fff}.env li b{font-weight:700}
+
+/* S9 */
+.lv{position:absolute;font:400 26px/1.3 var(--m);color:#ff6a55;width:400px}
+.lv h5{font:700 34px var(--m);color:#fff;margin-bottom:4px}
+.ws{position:absolute;left:1095px;top:188px;width:742px;height:822px}
+.ws h4{position:absolute;left:58px;top:42px;font:700 45px/1.15 var(--c);width:640px}
+.ws .tx{position:absolute;left:38px;top:540px;width:690px;font:400 25px/1.4 var(--m);color:#f0e8e4}.ws .tx b{font-weight:700}
+
+/* S10 */
+.circ{position:absolute;width:354px;height:354px;border-radius:50%;border:5px solid var(--red);background:radial-gradient(circle,#050203 55%,#1a0508);display:flex;flex-direction:column;align-items:center;text-align:center;padding:36px 26px 0;font:400 20.5px/1.22 var(--m);box-shadow:0 0 30px rgba(255,74,58,.6),inset 0 0 28px rgba(255,74,58,.35);animation:hi 8s ease-in-out infinite}
+.circ h4{font:700 34px/1.1 var(--c);margin:4px 0 8px}.circ svg{width:54px;height:54px;flex:none}
+.circ.g{border-color:#bff5d9;box-shadow:0 0 30px rgba(55,224,138,.55),inset 0 0 28px rgba(55,224,138,.25)}
+.circ.s{border-color:#c8c8c8;box-shadow:0 0 26px rgba(255,255,255,.3),inset 0 0 28px rgba(255,255,255,.12)}
+@keyframes hi{0%,22%{filter:brightness(1.55) saturate(1.3);transform:scale(1.04)}30%,100%{filter:brightness(.85);transform:scale(1)}}
+
+/* S11 */
+.ec{position:absolute;top:250px;width:456px;height:695px;text-align:center}
+.ec .in{padding:50px 34px}.ec svg{width:200px;height:190px}
+.ec h4{font:700 38px var(--d);margin:30px 0 20px}.ec p{font:400 30px/1.26 var(--c);text-align:left;color:#f0f0f0}
+
+/* S12/13 */
+.cc{position:absolute;top:255px;width:545px;height:425px}
+.cc h4{position:absolute;left:0;right:0;top:12px;text-align:center;font:700 40px var(--c)}
+.cc svg{position:absolute;left:12px;top:62px}
+.mon{position:absolute;left:195px;top:722px;width:1530px;height:185px;display:flex;flex-direction:column;justify-content:center;align-items:center;font:400 40px/1.36 var(--m);color:#f3ecea}
+.ins{position:absolute;left:0;right:0;top:925px;text-align:center;font:400 35px/1.32 var(--m);color:#9a9a9a}
+.bch{position:absolute;left:145px;top:250px;width:1000px;height:692px}
+
+/* S14 */
+.bp{position:absolute;top:305px;height:630px;text-align:center}
+.bp .hd{position:absolute;left:18px;right:18px;top:18px;height:68px;display:flex;align-items:center;justify-content:center;font:700 41px var(--c);border:2px solid rgba(255,255,255,.45)}
+.bp.r .hd{color:#ff6a55;background:rgba(122,15,20,.4);border-color:var(--red)}.bp.g .hd{color:#5bf0a0;background:rgba(10,80,40,.35);border-color:var(--green)}
+.bp p{position:absolute;left:32px;right:30px;font:400 29px/1.28 var(--c);text-align:left}
+.st{position:absolute;display:flex;align-items:center;justify-content:center;text-align:center;border:3px solid #d8d8d8;background:#222;font:400 31px/1.15 var(--c);color:#eee;transition:all .3s}
+.st.on{border-color:var(--red);background:#3a0a0e;box-shadow:0 0 22px var(--red);color:#fff}
+.stl{position:absolute;height:2px;background:#aaa}
+
+/* S15 */
+.big{position:absolute;left:166px;top:330px;font:700 100px/1.12 var(--c);letter-spacing:-.01em}
+.big em{font-style:normal;color:#ff7a62}
+.fut{position:absolute;left:1228px;width:590px;height:164px;display:flex}
+.fut .ic{width:164px;height:164px;flex:none;border:3px solid var(--red);box-shadow:0 0 16px rgba(255,74,58,.5);display:flex;align-items:center;justify-content:center;background:#10050a;position:relative}
+.fut .ic svg{width:92px;height:92px}
+.fut .tx{margin-left:16px;flex:1;border:2px solid #666;border-top:0;border-left:0;padding:10px 14px 0 16px;background:linear-gradient(90deg,rgba(255,255,255,.06),transparent);clip-path:polygon(0 0,100% 0,100% 80%,calc(100% - 24px) 100%,0 100%)}
+.fut h5{font:700 29px/1.15 var(--c)}.fut p{font:400 25px/1.18 var(--c);color:#bdbdbd}
+
+/* UI */
+#prog{position:fixed;left:0;top:0;height:4px;width:0;background:var(--red);z-index:60;box-shadow:0 0 14px var(--red);transition:width .5s}
+#ctr{position:fixed;right:20px;bottom:12px;font:400 13px var(--m);color:#664;z-index:60;letter-spacing:.1em;color:#777}
+#hint{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);font:400 13px var(--m);color:#bbb;background:rgba(0,0,0,.75);padding:8px 16px;border:1px solid #522;border-radius:20px;z-index:60;transition:opacity 1s}
+.nav{position:fixed;top:0;bottom:0;width:16%;z-index:55;cursor:pointer}
+#grid{position:fixed;inset:0;background:rgba(4,2,3,.97);z-index:70;display:none;padding:40px;overflow:auto;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;align-content:start}
+#grid.on{display:grid}
+#grid button{background:#12080a;border:1px solid #3a1a1c;color:#eee;padding:20px 16px;font:400 14px var(--m);text-align:left;cursor:pointer;letter-spacing:.05em}
+#grid button:hover,#grid button.cur{border-color:var(--red);color:var(--red2)}
+</style>
+</head>
+<body>
+<div id="prog"></div>
+<div class="nav" style="left:0" onclick="go(-1)"></div><div class="nav" style="right:0" onclick="go(1)"></div>
+
+<svg width="0" height="0" style="position:absolute">
+ <defs>
+  <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  <filter id="glow2" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="9" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  <filter id="blur18"><feGaussianBlur stdDeviation="18"/></filter>
+  <marker id="mR" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M1 1L9 5 1 9z" fill="#ff5a4a"/></marker>
+  <marker id="mG" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M1 1L9 5 1 9z" fill="#37e08a"/></marker>
+  <marker id="mW" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M1 1L9 5 1 9z" fill="#ddd"/></marker>
+  <marker id="mWs" markerWidth="10" markerHeight="10" refX="2" refY="5" orient="auto-start-reverse"><path d="M1 1L9 5 1 9z" fill="#ff5a4a"/></marker>
+ </defs>
+</svg>
+
+<div id="stage">
+
+<!-- 01 -->
+<section class="slide" id="s1">
+  <h1 class="t1" data-a>Z-Game: Học Tăng Cường Cho Kẻ Địch Trong FPS</h1>
+  <div class="rule1" data-a></div>
+  <p class="sub1" data-a>Sự tiến hóa của trí tuệ nhân tạo thông qua PPO, Curriculum và Self-Play.</p>
+  <p class="team1" data-a>Nhóm thực hiện: Nguyễn Võ Trung Hưng (SE193635) · Ngô Phúc Nguyên (SE192516) · Lê Như Đạt (SE192807) | Môn học: REL</p>
+  <div class="tgt" data-a="z">
+   <svg viewBox="0 0 600 860" width="600" height="860">
+    <defs>
+     <radialGradient id="zg" cx="50%" cy="38%" r="60%"><stop offset="0" stop-color="#ff9a6a"/><stop offset=".45" stop-color="#ff3d22"/><stop offset="1" stop-color="#7a0e0a"/></radialGradient>
+     <linearGradient id="zf" x1="0" y1="0" x2="0" y2="1"><stop offset=".62" stop-color="#000" stop-opacity="0"/><stop offset=".95" stop-color="#000" stop-opacity=".8"/></linearGradient>
+     <pattern id="px" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M10 0H0V10" fill="none" stroke="#000" stroke-opacity=".3" stroke-width="1.5"/></pattern>
+     <path id="zs" d="M300 70C340 70 360 100 358 135 356 160 340 172 340 184L405 198C450 213 472 258 476 308L490 408C496 448 480 478 465 503L450 568 430 568 425 478 405 408 405 528 395 608 405 708 410 798 340 798 335 648 325 568 300 568 275 568 265 648 260 798 190 798 195 708 205 608 195 528 195 408 175 478 170 568 150 568 135 503C120 478 104 448 110 408L124 308C128 258 150 213 195 198L260 184C260 172 244 160 242 135 240 100 260 70 300 70Z"/>
+     <clipPath id="zc"><use href="#zs"/></clipPath>
+    </defs>
+    <!-- frame -->
+    <g fill="none" stroke="#bdb6b0" stroke-width="3" opacity=".8"><path d="M14 80V14H80M520 14H586V80M586 780V846H520M80 846H14V780"/></g>
+    <rect x="40" y="40" width="520" height="780" fill="rgba(255,60,40,.05)" stroke="#bdb6b0" stroke-opacity=".5"/>
+    <g stroke="rgba(255,255,255,.14)"><path d="M40 160H560M40 280H560M40 400H560M40 520H560M40 640H560M40 760H560M130 40V820M220 40V820M380 40V820M470 40V820"/></g>
+    <use href="#zs" fill="#ff2a1a" filter="url(#blur18)" opacity=".75"/>
+    <use href="#zs" fill="url(#zg)"/>
+    <g clip-path="url(#zc)"><rect width="600" height="860" fill="url(#px)"/><rect width="600" height="860" fill="url(#zf)"/><rect class="scanbar" x="0" y="0" width="600" height="14" fill="rgba(255,230,210,.5)"><animate attributeName="y" values="60;800;60" dur="5s" repeatCount="indefinite"/></rect></g>
+    <g stroke="rgba(255,255,255,.7)" stroke-width="2"><path d="M300 30V830"/><path d="M0 438H600"/></g>
+    <g stroke="rgba(255,255,255,.5)" stroke-width="2"><path d="M290 270h20M290 360h20M290 640h20M290 740h20M30 438v14M90 438v14M150 438v14M450 438v14M510 438v14M570 438v14"/></g>
+    <g fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2"><circle cx="300" cy="438" r="96"/><path d="M132 270L468 606M468 270L132 606" stroke-dasharray="6 8" stroke-opacity=".5"/></g>
+    <g class="spin" fill="none" stroke="#ff6a55" stroke-width="3" stroke-dasharray="40 30"><circle cx="300" cy="438" r="150"/></g>
+    <g class="spin2" fill="none" stroke="#ff9a8a" stroke-width="2" stroke-dasharray="4 10"><circle cx="300" cy="438" r="200"/></g>
+    <g font-family="Roboto Mono" font-size="15" fill="#e8e0da"><text x="385" y="85">TGT: Z-BOSS_01</text><text x="385" y="104">COORDS: 45.321N, 121.543W</text><text x="385" y="123">TARGET: OBS1</text><text x="385" y="142" fill="#ff4a3a" class="blink">DANGER: CRITICAL</text>
+     <text x="60" y="760">TGT: Z-BOSS_01</text><text x="60" y="779">TGT: Z-BOSS_02</text><text x="60" y="798">COORDS: 45.321N, 121.543W</text><text x="60" y="835" fill="#ff7a6a">DANGER: CRITICAL</text></g>
+   </svg>
+  </div>
+</section>
+
+<!-- 02 -->
+<section class="slide" id="s2">
+  <h2 class="ttl" data-a>Vượt Qua AI Lập Trình Sẵn</h2><div class="hr" style="top:146px" data-a></div>
+  <p class="lead" data-a style="top:164px">Kẻ địch truyền thống chỉ là những mục tiêu di động có thể đoán trước. Z-Game biến chúng thành những thợ săn thực thụ: chính sách (policy) tự học thông qua thử-sai và phần thưởng (reward) từ kết quả giao tranh.</p>
+  <div class="pnl box" style="left:80px;border-color:#3b566b;box-shadow:0 0 18px rgba(80,120,160,.3);background:rgba(12,24,34,.85)" data-a="l">
+    <h3>Thuật toán cố định (Hard-coded AI)</h3>
+    <div class="dk" style="left:56px;top:84px;width:110px;height:50px"></div><div class="dk" style="left:690px;top:84px;width:100px;height:110px"></div><div class="dk" style="left:690px;top:215px;width:100px;height:90px"></div>
+    <div class="hc" style="top:100px">Thấy người chơi</div>
+    <svg class="hcA" style="top:180px" viewBox="0 0 24 46"><path d="M12 0V36" stroke="#5f7f99" stroke-width="3"/><path d="M2 30L12 44 22 30z" fill="#5f9fc0"/></svg>
+    <div class="hc" style="top:244px">Đi thẳng tới</div>
+    <svg class="hcA" style="top:324px" viewBox="0 0 24 46"><path d="M12 0V36" stroke="#5f7f99" stroke-width="3"/><path d="M2 30L12 44 22 30z" fill="#5f9fc0"/></svg>
+    <div class="hc" style="top:386px">Bị kẹt / Bị thả diều (Kite)</div>
+    <div style="position:absolute;left:56px;top:380px;width:132px;height:22px;background:rgba(160,40,40,.5);border:1px solid #b44;font:400 11px var(--m);color:#f99;padding:3px 6px">HIGH-LEVEL THREAT</div>
+    <div style="position:absolute;left:56px;top:410px;width:132px;height:22px;background:rgba(40,80,120,.5);border:1px solid #58a;font:400 11px var(--m);color:#9cf;padding:3px 6px">LOW-LEVEL THREAT</div>
+  </div>
+  <div class="pnl box" style="left:990px;background:radial-gradient(ellipse at 50% 50%,rgba(120,10,16,.45),rgba(10,3,5,.9))" data-a="r">
+    <h3>Học Tăng Cường (Reinforcement Learning)</h3>
+    <svg id="net2" viewBox="0 0 840 440" width="840" height="440" style="position:absolute;left:0;top:78px"></svg>
+    <div class="mono" style="position:absolute;left:300px;top:116px;font-size:11px;color:#f99;line-height:1.35">REWARD: +10<br>PENALTY: -5<br>POLICY UPDATE<br>ADAPTATION RATE: HIGH</div>
+  </div>
+  <div class="cham" style="left:310px;top:848px;width:1296px;height:166px" data-a><div class="in" style="display:flex;align-items:center;padding:0 40px;font:400 26px/1.5 var(--m);white-space:nowrap;color:#f2e9e6">
+    <div>1. PPO có thể vượt qua các thuật toán tìm đường truyền thống (baseline) không?<br>2. Khi đối thủ (người chơi) cũng tự học, kẻ địch có thể thích nghi không?<br>3. Yếu tố thiết kế nào quyết định sự thành bại của chính sách?</div></div></div>
+  <div class="mono" style="position:absolute;left:82px;top:964px;font-size:13px;color:#c88">POWER &gt;</div>
+  <div style="position:absolute;left:82px;top:984px;width:200px;height:16px;border:1px solid #c66;padding:2px"><div style="height:100%;width:0;background:repeating-linear-gradient(90deg,#fff 0 6px,transparent 6px 9px);transition:width 2s 1s" class="pw"></div></div>
+  <div class="eq" style="left:1640px;top:954px"><i style="animation-delay:-.1s"></i><i style="animation-delay:-.5s"></i><i style="animation-delay:-.9s"></i><i style="animation-delay:-.3s"></i><i style="animation-delay:-.7s"></i><i style="animation-delay:-.2s"></i><i style="animation-delay:-.8s"></i><i style="animation-delay:-.4s"></i><i style="animation-delay:-1s"></i><i style="animation-delay:-.6s"></i><i style="animation-delay:-.15s"></i><i style="animation-delay:-.55s"></i></div>
+</section>
+
+<!-- 03 -->
+<section class="slide" id="s3">
+  <h2 class="ttl" data-a>Kiến Trúc Hệ Thống Tổng Quan</h2><div class="hr" style="top:146px" data-a></div>
+  <p class="lead" data-a style="top:164px">Insight: Đóng gói hoàn toàn engine game vào MDP/POMDP interface. Cùng một bộ luật (game_core) chạy ở 60 FPS khi chơi, và được bọc thành Gymnasium env khi huấn luyện không đồ họa. Ngoài ra env_zombie.py là sân tập nhẹ, không dùng World, đo được ~10,000 bước/giây trên 1 tiến trình.</p>
+  <svg id="arch" viewBox="0 0 1920 1080" width="1920" height="1080" style="position:absolute;inset:0" data-a="z">
+   <g text-anchor="middle">
+    <!-- pipes -->
+    <g stroke="#ff4a3a" fill="none">
+     <path d="M668 450V852M1243 450V852" stroke-width="44" opacity=".22" filter="url(#glow2)"/>
+     <path d="M668 450V852M1243 450V852" stroke-width="4" class="flow" filter="url(#glow)"/>
+     <path d="M410 378H350Q318 378 318 410V858Q318 890 350 890H388" stroke-width="12" opacity=".25" filter="url(#glow)"/>
+     <path d="M410 378H350Q318 378 318 410V858Q318 890 350 890H388" stroke-width="3" class="flow" filter="url(#glow)"/>
+     <path d="M1500 378H1560Q1592 378 1592 410V858Q1592 890 1560 890H1524" stroke-width="12" opacity=".25" filter="url(#glow)"/>
+     <path d="M1500 378H1560Q1592 378 1592 410V858Q1592 890 1560 890H1524" stroke-width="3" class="flow" filter="url(#glow)"/>
+    </g>
+    <!-- brain -->
+    <path d="M440 295H1470L1500 325V420L1470 450H440L410 420V325Z" fill="#12060a" stroke="#ff4a3a" stroke-width="3" filter="url(#glow)"/>
+    <text x="955" y="364" font-size="42" font-weight="700" fill="#ff5a3a">Brain</text>
+    <text x="955" y="410" font-size="37" fill="#fff">train.py · train_player.py · league.py (SB3 PPO)</text>
+    <!-- wrappers -->
+    <path d="M410 560V530H1500V560M410 670V700H1500V670" fill="none" stroke="#ff4a3a" stroke-width="2" opacity=".8"/>
+    <g fill="#12060a" stroke="#ff4a3a" stroke-width="2.5" filter="url(#glow)"><rect x="440" y="558" width="455" height="80"/><rect x="1017" y="558" width="455" height="80"/></g>
+    <path d="M895 598H1017" stroke="#ff4a3a" stroke-width="3"/>
+    <text x="668" y="610" font-size="34" fill="#fff">zombie_world_env.py</text><text x="1243" y="610" font-size="36" fill="#fff">player_env.py</text>
+    <text x="955" y="678" font-size="38" fill="#fff">(Gymnasium wrappers quanh World)</text>
+    <text x="1297" y="497" font-size="20" fill="#fff" text-anchor="start">1 ACTION = 0.1s = 6 FRAME</text>
+    <text x="350" y="738" font-size="20" fill="#fff" text-anchor="start">60 FPS PHYSICS LOOP</text>
+    <!-- core -->
+    <path d="M388 768H1524V1013H388Z" fill="rgba(18,6,10,.65)" stroke="#ff4a3a" stroke-width="3" filter="url(#glow)"/>
+    <text x="955" y="824" font-size="42" font-weight="700" fill="#ff5a3a">Core Engine</text>
+    <g fill="#12060a" stroke="#ff4a3a" stroke-width="2.5" filter="url(#glow)"><rect x="440" y="852" width="455" height="115"/><rect x="1017" y="852" width="455" height="115"/></g>
+    <text x="668" y="900" font-size="38" fill="#fff">game_core.py</text><text x="668" y="942" font-size="37" fill="#fff">(Vật lý, Raycasting, Combat)</text>
+    <text x="1243" y="900" font-size="38" fill="#fff">game.py</text><text x="1243" y="942" font-size="37" fill="#fff">(Render 2D giả 3D)</text>
+    <path d="M900 910H1012" stroke="#ff5a4a" stroke-width="6" marker-start="url(#mWs)" marker-end="url(#mR)"/>
+   </g>
+   <circle r="7" fill="#fff" filter="url(#glow)"><animateMotion dur="2.4s" repeatCount="indefinite" path="M668 852V450"/></circle>
+   <circle r="7" fill="#fff" filter="url(#glow)"><animateMotion dur="2.4s" begin=".6s" repeatCount="indefinite" path="M1243 450V852"/></circle>
+   <circle r="7" fill="#ff9a8a" filter="url(#glow)"><animateMotion dur="3.2s" repeatCount="indefinite" path="M388 890H350Q318 890 318 858V410Q318 378 350 378H410"/></circle>
+   <circle r="7" fill="#ff9a8a" filter="url(#glow)"><animateMotion dur="3.2s" begin="1.6s" repeatCount="indefinite" path="M1500 378H1560Q1592 378 1592 410V858Q1592 890 1560 890H1524"/></circle>
+  </svg>
+</section>
+
+<!-- 04 -->
+<section class="slide" id="s4">
+  <h2 class="ttl" style="left:166px;top:104px" data-a>Tác Tử vs Tác Tử: Định Nghĩa MDP/POMDP</h2>
+  <div class="tbw" data-a>
+    <div class="vl"></div>
+    <table>
+      <tr><th style="width:272px;border-bottom:1px solid #4a4a4a"></th><th style="color:#ff6a55">Tác tử Zombie / Boss</th><th style="color:#d6d6d6">Tác tử Người Chơi</th></tr>
+      <tr><td class="h">Quan sát<span>(Observation)</span></td><td><span class="R">POMDP:</span> Vector 29 số thực. (Tia nhìn tường, hướng người chơi, vận tốc).</td><td><span class="W">Egocentric:</span> Vector 113 = 10 bản thân + 3 tiến độ + 16 tia tường + 6 zombie gần nhất × 14.</td></tr>
+      <tr><td class="h">Hành động<span>(Action)</span></td><td><span class="R">Discrete(18):</span> 9 hướng đi × {cho phép đánh, giữ đòn}.</td><td><span class="W">MultiDiscrete:</span> Tiến/lùi, ngang, xoay, bắn, nạp, đổi súng.</td></tr>
+      <tr><td class="h">Mục tiêu<span>(Reward)</span></td><td><span class="R" style="font-weight:400">Thưởng</span> tiến gần (theo đường thật), đòn trúng. <span class="R" style="font-weight:400">Phạt</span> bị bắn, bị ngắm, vung trượt, chết.</td><td><span class="W" style="font-weight:400">Thưởng</span> gây sát thương, hạ địch, dọn màn. <span class="W" style="font-weight:400">Phạt</span> mất máu, chết, bắn trượt.</td></tr>
+      <tr><td class="h">Thuật toán</td><td style="text-align:center"><span class="R" style="font-weight:500">PPO</span> (MlpPolicy 64x64)</td><td style="text-align:center"><span class="W">PPO</span> (MlpPolicy 256x256)</td></tr>
+    </table>
+    <div class="bk a" style="left:-14px;top:-14px;border-color:#ddd"></div><div class="bk b" style="right:-14px;top:-14px;border-color:#ddd"></div><div class="bk c" style="left:-14px;bottom:-14px;border-color:#ddd"></div><div class="bk d" style="right:-14px;bottom:-14px;border-color:#ddd"></div>
+  </div>
+  <div class="note" style="left:155px;top:852px;width:1610px;height:142px;font-size:44px" data-a><div><b>Tính Ngẫu Nhiên:</b> Mỗi episode bốc ngẫu nhiên vị trí xuất phát, loại zombie, loại súng, bot có thả diều hay không (và 50% ôn lại màn cũ).</div></div>
+</section>
+
+<!-- 05 -->
+<section class="slide" id="s5">
+  <h2 class="ttl acc" style="top:60px" data-a>Nhận Thức &amp; Hành Động Của Zombie</h2>
+  <p class="lead mono" style="top:140px;font-size:29px;line-height:1.3;color:#9a9a9a;right:560px" data-a>POMDP: MLP không có bộ nhớ, nên vận tốc và hướng nhìn của người chơi được đưa vào obs để thay cho lịch sử.</p>
+  <svg viewBox="0 0 1920 1080" width="1920" height="1080" style="position:absolute;inset:0" data-a>
+   <defs><linearGradient id="cone" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity=".45"/><stop offset="1" stop-color="#fff" stop-opacity=".02"/></linearGradient></defs>
+   <!-- FOV -->
+   <g transform="translate(258 432)" fill="none" stroke="#999"><path d="M0 0L-120 -142A185 185 0 0 1 120 -142Z" fill="rgba(255,255,255,.08)"/><path d="M-84 -100A130 130 0 0 1 84 -100M-46 -55A72 72 0 0 1 46 -55"/><path d="M0 0V-145" stroke-dasharray="4 4"/><path d="M0 -112A112 112 0 0 1 82 -78" stroke="#ff5a4a" stroke-width="2" marker-end="url(#mR)"/></g>
+   <g font-family="Roboto Mono" font-size="14" fill="#ccc"><text x="254" y="276">0</text><text x="366" y="330">8m</text><text x="345" y="355">30m</text><text x="318" y="384">20m</text><text x="294" y="411">FOV</text></g>
+   <!-- rays -->
+   <g stroke="#ff5a4a" stroke-width="1.3" opacity=".75"><path d="M668 382L455 280M668 382L420 300M668 382L400 330M668 382L380 382M668 382L405 430M668 382L440 470M668 382L500 500"/></g>
+   <path d="M418 382H660" stroke="#ff7a6a" stroke-width="1.5" stroke-dasharray="4 5"/><text x="418" y="388" font-size="26" fill="#ccc" font-family="Roboto Mono" text-anchor="middle">+</text>
+   <!-- cone -->
+   <path d="M705 382L1000 292V472Z" fill="url(#cone)"/><path d="M705 382L1000 292M705 382L1000 472" stroke="#ddd" stroke-width="1" stroke-dasharray="6 6"/>
+   <g fill="none" stroke="#ddd" opacity=".7"><ellipse cx="780" cy="382" rx="14" ry="30"/><ellipse cx="840" cy="382" rx="22" ry="46"/><ellipse cx="920" cy="382" rx="28" ry="80"/></g>
+   <path d="M705 382H1068" stroke="#ff5a4a" stroke-width="3" class="flow" marker-end="url(#mR)" filter="url(#glow)"/>
+   <g transform="translate(1140 382)" fill="none" stroke="#ddd" stroke-width="2"><path d="M-46 -46v-14h14M32 -60h14v14M46 46v14H32M-32 60h-14V46M-46 -46" stroke-dasharray="1 0"/><circle r="34"/><circle r="16" stroke="#ff5a4a" stroke-width="3" fill="rgba(255,74,58,.3)" class="pulse"/><path d="M0 -50V-26M0 26V50M-50 0H-26M26 0H50"/></g>
+   <path d="M772 412L772 400" stroke="#ff5a4a"/><circle cx="772" cy="412" r="6" fill="#ff5a4a" filter="url(#glow)"/>
+   <!-- body -->
+   <g fill="rgba(255,255,255,.035)" stroke="#e9e0dc" stroke-width="1.6" filter="url(#glow)" opacity=".92">
+    <ellipse cx="672" cy="382" rx="36" ry="44"/><path d="M655 424L690 424 698 470 648 470Z"/>
+    <path d="M592 470H752L742 560 725 650 735 705H612L620 650 602 560Z"/>
+    <path d="M592 470L570 482 540 590 515 685 535 692 560 612 598 520Z"/><path d="M752 470L776 482 805 590 828 690 808 698 785 616 746 520Z"/>
+    <path d="M612 705H672L664 820 660 925 625 932 622 820Z"/><path d="M672 705H735L748 820 766 925 730 932 692 820Z"/>
+   </g>
+   <g stroke="rgba(255,255,255,.4)" stroke-width="1"><path d="M592 470L672 560 752 470M602 560L742 560M620 650L725 650M672 470V705M612 705L672 650 735 705M648 470L672 560M698 470L672 560M570 482L598 520M776 482L746 520M672 705L664 820M672 705L748 820M640 400L672 424 704 400M650 360L672 340 694 360M635 382L672 420 710 382"/></g>
+   <g fill="#ff5a4a" filter="url(#glow)"><circle cx="656" cy="378" r="6" class="pulse"/><circle cx="688" cy="378" r="6" class="pulse"/><rect x="655" y="548" width="34" height="34" fill="none" stroke="#ff5a4a" stroke-width="2"/><path d="M660 558H684M660 566H684M660 574H678" stroke="#ff5a4a"/></g>
+   <!-- foot arrows -->
+   <g stroke="#ddd" stroke-width="2.5" fill="none" marker-end="url(#mW)"><path d="M706 915L958 858"/><path d="M706 925L1072 972"/><path d="M706 930L982 998"/><path d="M700 940L714 1034"/><path d="M696 930L836 1010"/></g>
+   <path d="M520 802Q640 800 650 880Q660 910 708 914" fill="none" stroke="#ddd" stroke-width="2.5" marker-end="url(#mW)"/>
+   <!-- connectors -->
+   <g stroke="#ff5a4a" stroke-width="2" fill="none"><path d="M478 517H540L640 400"/><path d="M478 824H548L576 852"/><path d="M915 521H872L772 412"/><path d="M915 735H866L700 592"/></g>
+   <g fill="#ff5a4a" filter="url(#glow)"><circle cx="576" cy="852" r="6"/><circle cx="700" cy="592" r="6"/></g>
+  </svg>
+  <div class="cham" style="left:98px;top:463px;width:410px;height:106px;--cp:0 0,100% 0,100% calc(100% - 22px),calc(100% - 22px) 100%,0 100%" data-a="l"><div class="in call"><div class="in"><h4>1. Mắt (Raycasting):</h4>&nbsp;- 8 tia tới tường (≤ 8m)</div></div></div>
+  <div class="cham" style="left:98px;top:752px;width:380px;height:146px;--cp:0 0,100% 0,100% calc(100% - 22px),calc(100% - 22px) 100%,0 100%" data-a="l"><div class="in call"><div class="in"><h4>2. Định vị (PathFinder):</h4>&nbsp;- Đường thật (3)<br>&nbsp;- Hướng thẳng (3)</div></div></div>
+  <div class="cham" style="left:914px;top:462px;width:410px;height:150px;--cp:22px 0,100% 0,100% 100%,0 100%,0 22px" data-a="r"><div class="in call"><div class="in"><h4>3. Về người chơi:</h4>&nbsp;- Vận tốc (2), hướng (2)<br>&nbsp;- Cờ “bị ngắm” (1)</div></div></div>
+  <div class="cham" style="left:914px;top:640px;width:410px;height:200px;--cp:22px 0,100% 0,100% 100%,0 100%,0 22px" data-a="r"><div class="in call"><div class="in"><h4>4. Trạng thái bản thân:</h4>&nbsp;- Loại zombie (4), súng (2)<br>&nbsp;- Máu, sẵn sàng đòn (2)<br>&nbsp;- Người chơi nạp / đạn (2)</div></div></div>
+  <div class="as" data-a="r"><h4>Action Space Breakdown:<br>18 Lựa chọn rời rạc</h4><div style="height:3px;background:var(--red);margin:22px 26px 20px"></div>
+    <div class="gb">9 Hướng đi<br>(Đứng yên, 4 hướng<br>chính, 4 chéo)</div><div style="font:300 80px/1.1 var(--c);margin:12px 0">×</div><div class="gb">2 Chế độ<br>(Cho phép đánh /<br>Giữ đòn)</div></div>
+</section>
+
+<!-- 06 -->
+<section class="slide" id="s6">
+  <h2 class="ttl acc" data-a>Hàm Phần Thưởng &amp; Reward Shaping</h2>
+  <svg id="rad" viewBox="0 0 1920 1080" width="1920" height="1080" style="position:absolute;inset:0" data-a="z"></svg>
+  <div class="rc" style="top:205px" data-a="r"><h4>Reward Chính (Sparse)</h4><p><b>+1.0</b> (Áp sát, zombie thường)<br><b>+0.5</b> (Mỗi đòn trúng)<br><b>+2.0</b> (Boss hạ người chơi)</p><div class="ft">Một mình thì quá thưa để bắt đầu học.</div></div>
+  <div class="rc g" style="top:432px" data-a="r"><h4>Reward Shaping (Dense)</h4><p><b>+0.3</b> × (d_trước − d_sau)<br><b>−0.001</b> mỗi bước</p><div class="ft">Dựa trên đường đi thật (Dijkstra), không phải đường chim bay.</div></div>
+  <div class="rc" style="top:664px" data-a="r"><h4>Hình Phạt (Penalties)</h4><p style="padding-bottom:12px"><b>−0.5</b> × dmg/maxHP (Bị bắn)<br><b>−0.01</b> (Đứng trong đường ngắm)<br><b>−0.05</b> (Vung trượt)<br><b>−1.0</b> (Chết)</p></div>
+  <div class="note" style="left:96px;top:938px;width:1740px;height:92px;font-size:33px;line-height:1.2" data-a><div><u>Shaping</u> theo đường đi thật cho tín hiệu dày đặc ở mọi bước; các hình phạt nhỏ khuyến khích tránh đường ngắm và không vung bừa.</div></div>
+</section>
+
+<!-- 07 -->
+<section class="slide" id="s7">
+  <h2 class="ttl" style="left:112px;top:84px;width:1180px" data-a>Động Cơ Suy Luận: Proximal Policy Optimization (PPO)</h2>
+  <p class="mono" style="position:absolute;left:112px;top:284px;font-size:38px;letter-spacing:.04em;color:#e8e8e8" data-a>Phân Tích Thuật Toán &amp; Tham Số Chính</p>
+  <div class="net" style="top:378px" data-a="l"><h4>MẠNG ACTOR (CHÍNH SÁCH)</h4>
+    <div class="nn" style="left:30px">29 obs</div><div class="na" style="left:190px"></div><div class="nn r" style="left:230px">Linear(64)<small>tanh</small></div><div class="na" style="left:394px"></div><div class="nn r" style="left:434px">Linear(64)<small>tanh</small></div><div class="na" style="left:598px"></div><div class="nn r" style="left:642px;width:156px">18 logits<small>(Xác suất action)</small></div></div>
+  <div class="net" style="top:692px" data-a="l"><h4>MẠNG CRITIC (GIÁ TRỊ)</h4>
+    <div class="nn" style="left:30px">29 obs</div><div class="na" style="left:190px"></div><div class="nn r" style="left:230px">Linear(64)<small>tanh</small></div><div class="na" style="left:394px"></div><div class="nn r" style="left:434px">Linear(64)<small>tanh</small></div><div class="na" style="left:598px"></div><div class="nn r" style="left:642px;width:156px">1 V(o)<small>(Hàm giá trị)</small></div></div>
+  <div class="cham" style="left:1012px;top:214px;width:828px;height:280px;--cp:0 0,100% 0,100% 100%,0 100%" data-a="r"><div class="in"><div class="fm"><i>L</i><sup style="font-size:.55em">CLIP</sup>(<i>θ</i>) = Ê<sub style="font-size:.55em"><i>t</i></sub>[<br><span style="padding-left:70px">[min(<i>r<sub style="font-size:.6em">t</sub></i>Â<sub style="font-size:.6em"><i>t</i></sub>, clip(<i>r<sub style="font-size:.6em">t</sub></i>, 1 − <i>ε</i>, 1 + <i>ε</i>)Â<sub style="font-size:.6em"><i>t</i></sub>)]</span></div></div></div>
+  <p class="mono" style="position:absolute;left:1040px;top:508px;width:760px;font-size:28px;line-height:1.3;color:#e8e8e8" data-a>Hàm mục tiêu PPO với kỹ thuật clipping để giới hạn thay đổi policy.</p>
+  <div class="hp" data-a="r"><div>KEY HYPERPARAMETERS:</div><div><b>Learning Rate:</b> 3e-4</div><div><b>Clip Epsilon (ε):</b> 0.2</div><div><b>Discount Factor (γ):</b> 0.99</div><div><b>Entropy Coefficient:</b> 0.01 (Duy trì khám phá)</div><div><b>GAE (λ):</b> 0.95 (Ước lượng lợi thế)</div><div><b>Rollout:</b> 512 bước × 8 env · batch 256 · 10 epoch</div></div>
+</section>
+
+<!-- 08 -->
+<section class="slide" id="s8">
+  <h2 class="ttl acc" data-a>Hai Môi Trường Huấn Luyện</h2>
+  <div style="position:absolute;left:76px;right:76px;top:172px;height:3px;background:linear-gradient(90deg,transparent,var(--red) 20%,var(--red) 80%,transparent);box-shadow:0 0 14px var(--red)"></div>
+  <div class="cham env" style="left:96px;--cp:0 0,100% 0,100% calc(100% - 30px),calc(100% - 30px) 100%,0 100%" data-a="l"><div class="in">
+    <h3><b>env_zombie.py</b> <span>(Sân Tập Cơ Bản)</span></h3>
+    <div class="v"><svg viewBox="0 0 762 402" width="762" height="372" id="gridmap"></svg></div>
+    <ul><li><b>Đối thủ:</b> Người chơi giả viết tay (PlayerBot) có độ trễ &amp; nhiễu ngắm.</li><li><b>Mục đích:</b> Học nhanh (~10,000 bước/s trên 1 tiến trình) các hành vi nền tảng: đuổi, vòng qua tường, tránh đường ngắm.</li></ul>
+  </div></div>
+  <div class="cham env" style="left:1012px;--cp:0 0,100% 0,100% calc(100% - 30px),calc(100% - 30px) 100%,0 100%" data-a="r"><div class="in">
+    <h3><b>zombie_world_env.py</b> <span>(Đấu Trường Thực Tế)</span></h3>
+    <div class="v"><svg viewBox="0 0 762 402" width="762" height="372" id="arena"></svg></div>
+    <ul><li><b>Đối thủ:</b> Nhiều phiên bản agent PPO (league); 15% trận gặp người chơi viết tay (ScriptedPlayer).</li><li><b>Mục đích:</b> Học trong game thật (World đầy đủ: nhiều zombie, đạn, combat) trước đối thủ biết thích nghi.</li></ul>
+  </div></div>
+  <div class="note" style="left:96px;top:925px;width:1740px;height:102px;font-size:35px;line-height:1.2" data-a><div>Môi trường nhẹ cho hội tụ nhanh, nhưng đối thủ viết tay có điểm yếu cố định. Môi trường đầy đủ cho zombie gặp đối thủ đa dạng, giảm nguy cơ học vẹt.</div></div>
+</section>
+
+<!-- 09 -->
+<section class="slide" id="s9">
+  <h2 class="ttl" style="left:104px;top:72px" data-a>Thang Bậc Hỗn Loạn: Curriculum &amp; Warm-Start</h2>
+  <svg id="stairs" viewBox="0 0 1100 1080" width="1100" height="1080" style="position:absolute;left:0;top:0" data-a></svg>
+  <div class="lv" style="left:395px;top:845px" data-a><h5>Level 1-2</h5>Súng lục. Bot phản xạ chậm (5→4), thả diều 0→25%.<br>(Học đuổi &amp; vòng tường).</div>
+  <div class="lv" style="left:576px;top:636px" data-a><h5>Level 3-4</h5>M4A1 mở khóa từ màn 3. Bot thả diều 50→75%, đủ 3 loại Zombie.<br>(Đối thủ khó dần).</div>
+  <div class="lv" style="left:772px;top:426px;width:310px" data-a><h5>Level 5 (Boss)</h5>Duel với Boss, bot phản xạ 1 bước, thả diều 100%. Train 800k bước.</div>
+  <div class="cham ws" style="--cp:0 0,calc(100% - 34px) 0,100% 34px,100% 100%,34px 100%,0 calc(100% - 34px));--bgc:#12050a" data-a="r"><div class="in">
+    <h4>Crucial Engineering Technique: Warm-Start</h4>
+    <svg id="ws" viewBox="0 0 742 360" width="742" height="360" style="position:absolute;left:0;top:150px"></svg>
+    <div class="tx"><b>Problem:</b> Model cũ có 9 action, không nạp được vào lớp 18 action.<br><b>Solution:</b> Giữ nguyên 9 hàng cũ, sao chép sang 9 hàng &quot;giữ đòn&quot; mới, bias của hàng mới đặt −1.5.<br><b>Result:</b> Xác suất &quot;giữ đòn&quot; ban đầu ≈ 18%; hành vi cũ gần như giữ nguyên, PPO tiếp tục tinh chỉnh.</div>
+  </div></div>
+</section>
+
+<!-- 10 -->
+<section class="slide" id="s10">
+  <div style="position:absolute;left:955px;top:535px;width:900px;height:900px;margin:-450px 0 0 -450px;border-radius:50%;border:3px solid rgba(255,74,58,.45);box-shadow:0 0 40px rgba(255,74,58,.3),inset 0 0 60px rgba(255,74,58,.1)"></div>
+  <h2 class="ttl" style="left:92px;top:68px;font-size:56px;line-height:1.12;z-index:5" data-a>Liên Đoàn Self-Play:<br>Vòng Lặp Tiến Hóa</h2>
+  <svg id="cyc" viewBox="0 0 1920 1080" width="1920" height="1080" style="position:absolute;inset:0"></svg>
+  <div class="circ" style="left:778px;top:38px;animation-delay:0s" data-a="z"><svg viewBox="0 0 64 64" fill="none" stroke="#ff7a6a" stroke-width="2.5"><circle cx="26" cy="30" r="9"/><circle cx="26" cy="30" r="3"/><path d="M26 17v4M26 39v4M13 30h4M35 30h4M17 21l3 3M32 36l3 3M35 21l-3 3M17 39l3-3"/><circle cx="46" cy="42" r="6"/></svg><h4>1. Zombie Học</h4>Đóng băng Agent người chơi. Zombie train với nhóm đối thủ gồm mọi phiên bản người chơi trong quá khứ.</div>
+  <div class="circ" style="left:1153px;top:358px;animation-delay:2s" data-a="z"><svg viewBox="0 0 64 64" fill="none" stroke="#ff7a6a" stroke-width="2.5"><circle cx="32" cy="32" r="14"/><circle cx="32" cy="32" r="5"/><path d="M32 6v14M32 44v14M6 32h14M44 32h14"/></svg><h4>2. Đánh Giá &amp; Lọc</h4>Đấu 40 trận (mặc định) cùng seed. Mỗi màn chỉ lên bản mới nếu tỉ lệ thắng tăng ≥ 3 điểm %.</div>
+  <div class="circ g" style="left:778px;top:673px;animation-delay:4s" data-a="z"><svg viewBox="0 0 64 64" fill="none" stroke="#5bf0a0" stroke-width="2.5"><path d="M32 12c-8-6-20 0-18 11-6 4-4 14 3 16 0 8 10 12 15 5 5 7 15 3 15-5 7-2 9-12 3-16 2-11-10-17-18-11zM32 12v40M24 28h8M32 38h8"/></svg><h4>3. Người Chơi Học Lại</h4>Đóng băng Zombie. Người chơi cập nhật policy để tìm cách đánh bại bản Zombie vừa được nâng cấp.</div>
+  <div class="circ s" style="left:403px;top:358px;animation-delay:6s" data-a="z"><svg viewBox="0 0 64 64" fill="none" stroke="#ddd" stroke-width="2.5"><circle cx="32" cy="32" r="10"/><path d="M32 8v8M32 48v8M8 32h8M48 32h8M15 15l6 6M43 43l6 6M49 15l-6 6M21 43l-6 6"/></svg><h4 style="margin-top:4px">4. Lặp Lại</h4>Luân phiên đóng băng từng bên để đối thủ đỡ &quot;di động&quot; (non-stationarity); giữ bản cũ trong pool để tránh quên.</div>
+</section>
+
+<!-- 11 -->
+<section class="slide" id="s11">
+  <h2 class="ttl" style="left:166px;top:100px" data-a>Giao Thức Đánh Giá Độc Lập</h2>
+  <div class="cham ec" style="left:165px;--cp:30px 0,100% 0,100% calc(100% - 30px),calc(100% - 30px) 100%,0 100%,0 30px" data-a><div class="in">
+    <svg viewBox="0 0 200 190" fill="none" stroke="#ff5a4a" stroke-width="5" filter="url(#glow)"><path d="M70 85V62a30 30 0 0 1 60 0v23"/><rect x="52" y="85" width="96" height="72" rx="10"/><circle cx="100" cy="117" r="9"/><path d="M100 126v16M52 100H22M52 130H22M148 100h30M148 130h30M70 157v22M130 157v22M22 100v-14M178 100V86M22 130v14M178 130v14"/></svg>
+    <h4>Môi Trường Khách Quan</h4><p>- Đánh giá riêng, không dựa vào reward lúc train (reward shaping có thể bị khai thác).<br>- Deterministic: chọn action có xác suất cao nhất, không ôn lại màn cũ.</p></div></div>
+  <div class="cham ec" style="left:732px;--cp:30px 0,100% 0,100% calc(100% - 30px),calc(100% - 30px) 100%,0 100%,0 30px" data-a><div class="in">
+    <svg viewBox="0 0 200 190" fill="none" stroke="#ff5a4a" stroke-width="5" filter="url(#glow)"><rect x="40" y="20" width="120" height="140"/><path d="M60 40h22v22H60zM120 40a10 10 0 1 1 0 .1M70 140a8 8 0 1 0 .1 0M60 100h32v20M100 40v40h30M130 80v50a20 20 0 0 1-30 14" stroke-dasharray="1 0"/><path d="M100 92c12 10-12 22 0 34" stroke="#fff"/></svg>
+    <h4>Baseline Nghiêm Ngặt</h4><p>- So sánh với: Random (Ngẫu nhiên), Chase (Đi thẳng), và Path (Tìm đường Dijkstra có vòng tránh tường).<br>- Path đã biết đi vòng tường, nên là mốc khó: vượt Path mới cho thấy PPO học thêm ngoài việc tìm đường.</p></div></div>
+  <div class="cham ec" style="left:1297px;--cp:30px 0,100% 0,100% calc(100% - 30px),calc(100% - 30px) 100%,0 100%,0 30px" data-a><div class="in">
+    <svg viewBox="0 0 200 190" fill="none" stroke="#ff5a4a" stroke-width="5" filter="url(#glow)"><path d="M30 20V150H175"/><path d="M45 150C70 150 80 140 95 90S118 30 125 30 145 60 155 120 165 150 175 150"/><path d="M125 30V150M105 62V150M145 62V150" stroke-dasharray="2 8" stroke-width="3"/><g fill="#ff5a4a" stroke="none"><circle cx="60" cy="168" r="3"/><circle cx="90" cy="168" r="3"/><circle cx="125" cy="168" r="3"/><circle cx="158" cy="168" r="3"/></g></svg>
+    <h4>Kiểm Định Thống Kê</h4><p>- 100 episode mỗi ô, seed cố định (10000+i) dùng chung cho mọi policy.<br>- Khoảng tin cậy Wilson 95% và kiểm định McNemar trên các cặp trận cùng seed.</p></div></div>
+</section>
+
+<!-- 12 -->
+<section class="slide" id="s12">
+  <h2 class="ttl" style="left:166px;top:100px" data-a>Đường Học (Learning Curves): PPO So Với Path</h2>
+  <div class="cc" style="left:130px" data-a="z"><div class="bk a" style="width:36px;height:36px;left:0;top:0;border-color:#ff6a5a"></div><div class="bk b" style="width:36px;height:36px;right:0;top:0;border-color:#ff6a5a"></div><div class="bk c" style="width:36px;height:36px;left:0;bottom:0;border-color:#ff6a5a"></div><div class="bk d" style="width:36px;height:36px;right:0;bottom:0;border-color:#ff6a5a"></div><h4>Màn 1</h4><svg id="lc1" viewBox="0 0 520 340" width="520" height="340"></svg></div>
+  <div class="cc" style="left:688px" data-a="z"><div class="bk a" style="width:36px;height:36px;left:0;top:0;border-color:#ff6a5a"></div><div class="bk b" style="width:36px;height:36px;right:0;top:0;border-color:#ff6a5a"></div><div class="bk c" style="width:36px;height:36px;left:0;bottom:0;border-color:#ff6a5a"></div><div class="bk d" style="width:36px;height:36px;right:0;bottom:0;border-color:#ff6a5a"></div><h4>Màn 2</h4><svg id="lc2" viewBox="0 0 520 340" width="520" height="340"></svg></div>
+  <div class="cc" style="left:1246px" data-a="z"><div class="bk a" style="width:36px;height:36px;left:0;top:0;border-color:#ff6a5a"></div><div class="bk b" style="width:36px;height:36px;right:0;top:0;border-color:#ff6a5a"></div><div class="bk c" style="width:36px;height:36px;left:0;bottom:0;border-color:#ff6a5a"></div><div class="bk d" style="width:36px;height:36px;right:0;bottom:0;border-color:#ff6a5a"></div><h4>Màn 4</h4><svg id="lc4" viewBox="0 0 520 340" width="520" height="340"></svg></div>
+  <div class="cham mon" style="--cp:30px 0,100% 0,100% 100%,0 100%,0 30px;--bgc:#12050a" data-a><div class="in" style="display:flex;flex-direction:column;justify-content:center;align-items:center;font:400 38px/1.4 var(--m)">
+    <div>Màn 1: vượt Path (1.67) từ ~41k; cuối 1.92.</div><div>Màn 2: vượt Path (1.78) từ ~143k; cuối 2.07.</div><div>Màn 4: vượt Path (0.89) từ ~184k; cuối 0.95.</div></div></div>
+  <div class="ins" data-a>Insight: Đường đậm là trung bình 3 seed; cả 3 seed đều đi lên. Màn khó hơn thì vượt Path muộn hơn và biên độ vượt nhỏ hơn.</div>
+</section>
+
+<!-- 13 -->
+<section class="slide" id="s13">
+  <h2 class="ttl" style="left:166px;top:100px" data-a>Kết Quả: Định Lượng Mức Độ Thông Minh</h2>
+  <div class="cham bch" style="--cp:0 0,calc(100% - 30px) 0,100% 30px,100% 100%,30px 100%,0 calc(100% - 30px));--bgc:#0a0406" data-a="l"><div class="in"><svg id="bars" viewBox="0 0 1000 692" width="1000" height="692"></svg></div></div>
+  <div class="cham" style="left:1195px;top:250px;width:606px;height:228px;--cc:#d8d8d8;--cp:0 0,100% 0,100% calc(100% - 30px),calc(100% - 30px) 100%,0 100%;filter:drop-shadow(0 0 8px rgba(255,255,255,.3))" data-a="r"><div class="in" style="padding:22px 26px;font:400 25px/1.3 var(--m)"><div style="font:700 36px var(--c);text-align:center;margin-bottom:12px">Tỉ lệ hạ gục (Catch Rate)</div><b>Màn 1:</b> PPO 69% so với Path 54%.<br><b>Màn Boss:</b> PPO 95% so với Path 93% (chênh nhỏ).</div></div>
+  <div class="cham" style="left:1195px;top:500px;width:606px;height:400px;--cp:30px 0,100% 0,100% 100%,0 100%,0 30px;--bgc:#12050a" data-a="r"><div class="in" style="padding:24px 28px;font:400 32px/1.24 var(--c)"><div style="font:700 36px var(--c);color:#ff6a55;margin-bottom:6px">Wall Test (hành vi)</div>Tỉ lệ bước bị tường chặn (Màn 1):<br>Chase: 31% · Path: 15% · PPO: 6%<br>PPO ít bị kẹt nhất. Chưa có thí nghiệm bỏ raycast nên chưa kết luận nguyên nhân.</div></div>
+  <div class="mono" id="tc" style="position:absolute;right:100px;bottom:34px;font-size:30px;color:rgba(255,106,85,.55)">EVAL · 100 EPISODE / Ô</div>
+</section>
+
+<!-- 14 -->
+<section class="slide" id="s14">
+  <h2 class="ttl" style="left:142px;top:106px;font-size:68px;line-height:1.28;z-index:3" data-a>Trận Chiến Boss:<br>Khắc Phục Lỗ Hổng Khai Thác</h2>
+  <div class="cham bp r" style="left:108px;width:516px;--cp:0 0,100% 0,100% calc(100% - 30px),calc(100% - 30px) 100%,0 100%;--bgc:#120406" data-a="l"><div class="in">
+    <div class="hd">Chẩn Đoán Hành Vi</div>
+    <p style="top:112px;text-align:center"><b>Hiện tượng:</b> Boss vung tay -> Người chơi lùi đúng nhịp -> Boss vung trượt (giả thuyết thiết kế, mô tả trong combat.py).</p>
+    <svg viewBox="0 0 300 140" width="300" height="140" style="position:absolute;left:108px;top:236px" fill="none" stroke="#ddd" stroke-width="3"><circle cx="62" cy="52" r="9"/><path d="M62 62V90L40 118M62 90L84 112M62 72L38 84M62 72L88 64"/><path d="M20 128H260" stroke-width="2"/><path d="M42 40Q20 50 28 88" stroke-dasharray="4 5" marker-end="url(#mW)"/><path d="M170 20Q108 36 120 96" stroke="#ff5a4a" stroke-width="12" stroke-linecap="round" opacity=".8"/><circle cx="222" cy="40" r="12"/><path d="M200 56L246 56 252 100 238 128M214 56L196 100 178 120M240 62L186 80" /></svg>
+    <div style="position:absolute;left:0;right:0;top:420px;font:700 42px var(--c);color:#ff6a55">Nguyên nhân dự đoán:</div>
+    <p style="top:490px;text-align:center;font-size:30px;left:20px;right:20px">Thời điểm ra đòn bị cố định, người chơi học né đúng nhịp. Chưa có số đo trước khi sửa.</p>
+  </div></div>
+  <div class="cham bp w" style="left:690px;width:534px;--cp:0 0,100% 0,100% 100%,0 100%;--bgc:#0b0809" data-a="z"><div class="in">
+    <div class="hd" style="color:#fff">Combat State Machine</div>
+    <div class="stl" style="left:148px;width:22px;top:329px"></div><div class="stl" style="left:274px;width:22px;top:329px"></div><div class="stl" style="left:426px;width:30px;top:329px"></div>
+    <div class="st" id="st1" style="left:44px;top:278px;width:104px;height:104px;font-size:30px">Windup<br>(0.4s)</div>
+    <div class="st" id="st2" style="left:170px;top:288px;width:104px;height:84px">Strike</div>
+    <div class="st" id="st3" style="left:296px;top:288px;width:130px;height:84px">Recovery</div>
+    <svg viewBox="0 0 534 300" width="534" height="300" style="position:absolute;left:0;top:200px" fill="none" stroke="#aaa" stroke-width="2"><path d="M96 178V150H350V178"/><path d="M350 214V250H96V218" marker-end="url(#mW)"/></svg>
+    <svg viewBox="0 0 100 90" width="100" height="90" style="position:absolute;left:32px;top:200px" fill="none" stroke="#ff4a3a" stroke-width="4" class="pulse"><path d="M50 10L90 80H10Z"/><path d="M50 34V56M50 64v2"/></svg>
+  </div></div>
+  <div class="cham bp g" style="left:1290px;width:520px;--cp:0 0,calc(100% - 30px) 0,100% 30px,100% 100%,0 100%;--bgc:#04100a" data-a="r"><div class="in">
+    <div class="hd">Giải Pháp RL Thực Tế</div>
+    <p style="top:100px;font-size:27px"><b style="color:#5bf0a0">1. Sửa đổi Action Space<br>(Mở rộng từ 9 lên 18 hành động)</b><br>&nbsp;&nbsp;- Cho phép tự quyết định khi nào "Strike" và khi nào "Hold Attack".</p>
+    <p style="top:288px;font-size:27px"><b style="color:#5bf0a0">2. Bổ sung hình phạt:</b><br>&nbsp;&nbsp;−0.05 khi vung trượt (whiff). Recovery 0.35s sau mỗi đòn.</p>
+    <div style="position:absolute;left:0;right:0;top:402px;font:700 42px var(--c);color:#5bf0a0">Zombie thắng (Màn 5):</div>
+    <div style="position:absolute;left:0;right:0;top:452px;font:700 50px var(--c);color:#5bf0a0;text-shadow:0 0 22px rgba(55,224,138,.6)">85% → 100%</div>
+    <p style="top:602px;font-size:20px;left:20px;right:20px;text-align:center;color:#9fdcb8">vs agent người chơi PPO, 40 trận (league.csv)</p>
+    <svg viewBox="0 0 260 90" width="200" height="69" style="position:absolute;left:160px;top:518px" fill="#37e08a"><path d="M10 0V84H250" stroke="#37e08a" stroke-width="2" fill="none"/><rect class="bar" style="--i:0" x="70" y="14" width="34" height="70" opacity=".6"/><rect class="bar" style="--i:2" x="150" y="6" width="34" height="78"/></svg>
+  </div></div>
+  <svg viewBox="0 0 1920 1080" width="1920" height="1080" style="position:absolute;inset:0;pointer-events:none"><path d="M624 360H650V620H690" fill="none" stroke="#ff4a3a" stroke-width="2.5" class="flow" opacity=".0"/><path d="M624 400H660V627H684" fill="none" stroke="#ff4a3a" stroke-width="2.5"/><path d="M1224 625H1254V355H1290" fill="none" stroke="#37e08a" stroke-width="2.5"/></svg>
+</section>
+
+<!-- 15 -->
+<section class="slide" id="s15">
+  <h2 class="ttl" style="left:166px;top:100px;font-size:62px" data-a>Tổng Kết &amp; Tương Lai Của Z-Game</h2>
+  <div style="position:absolute;left:166px;top:268px;font:700 44px var(--c)" data-a>Bài Học Thiết Kế Cốt Lõi</div>
+  <div style="position:absolute;left:1004px;top:268px;font:700 44px var(--c)" data-a>Hướng Phát Triển</div>
+  <div class="big" data-a>Design &gt;<br><em>Hyperparameters</em></div>
+  <p style="position:absolute;left:182px;top:588px;width:700px;font:300 32px/1.3 var(--c);color:#e9e9e9" data-a><b style="font-weight:700">Không gian hành động</b> (Action Space) và <b style="font-weight:700">Hàm phần thưởng</b> (Reward Shaping) quyết định trí tuệ của agent nhiều hơn việc tinh chỉnh thông số PPO.</p>
+  <p style="position:absolute;left:182px;top:772px;width:700px;font:300 32px/1.3 var(--c);color:#e9e9e9" data-a><b style="font-weight:700">Lỗi thiết kế</b> (như đo khoảng cách đường chim bay thay vì đường thực) chỉ lộ ra khi AI đối đầu với một đối thủ có khả năng tự học khác.</p>
+  <svg viewBox="0 0 300 700" width="300" height="700" style="position:absolute;left:950px;top:330px" fill="none" stroke="#ff4a3a" stroke-width="3" data-a><circle cx="32" cy="310" r="8" fill="#ff4a3a" filter="url(#glow)"/><path d="M32 310H110L165 255V104H258M110 310H258M110 310L165 365V572H258" class="flow" filter="url(#glow)"/><circle cx="262" cy="104" r="6" fill="#ff4a3a"/><circle cx="262" cy="310" r="6" fill="#ff4a3a"/><circle cx="262" cy="572" r="6" fill="#ff4a3a"/></svg>
+  <div class="fut" style="top:330px" data-a="r"><div class="ic"><svg viewBox="0 0 92 92" fill="none" stroke="#ddd" stroke-width="3"><path d="M46 14c-12-8-30 2-26 18-9 6-6 22 5 24 1 12 15 17 21 7 6 10 20 5 21-7 11-2 14-18 5-24 4-16-14-26-26-18zM46 14v62"/><circle cx="66" cy="32" r="4" fill="#ff4a3a"/><circle cx="66" cy="56" r="4" fill="#ff4a3a"/></svg></div><div class="tx"><h5>Bộ nhớ (LSTM/Frame Stacking)</h5><p>Giải quyết hạn chế của POMDP, giúp AI suy luận ý định người chơi từ quá khứ.</p></div></div>
+  <div class="fut" style="top:580px" data-a="r"><div class="ic"><svg viewBox="0 0 92 92" fill="none" stroke="#ddd" stroke-width="3"><circle cx="46" cy="46" r="10"/><circle cx="46" cy="14" r="7"/><circle cx="16" cy="64" r="7"/><circle cx="76" cy="64" r="7"/><circle cx="16" cy="28" r="6"/><circle cx="76" cy="28" r="6"/><path d="M46 21V36M20 60L38 52M72 60L54 52M20 32L38 42M72 32L54 42"/></svg></div><div class="tx"><h5>Huấn luyện Tập Trung (CTDE/MAPPO)</h5><p>Cho phép đàn zombie phối hợp vây bắt thay vì hành động đơn lẻ.</p></div></div>
+  <div class="fut" style="top:826px" data-a="r"><div class="ic"><svg viewBox="0 0 92 92" fill="none" stroke="#ddd" stroke-width="3"><circle cx="34" cy="28" r="12"/><path d="M12 76V62C12 52 22 46 34 46S56 52 56 62V76M52 58h24v18H52zM58 67h12M64 62v10"/><path d="M60 18h20M60 26h14" stroke="#ff4a3a"/></svg></div><div class="tx"><h5>Human Playtesting</h5><p>Thu thập log từ người thật để đánh giá độ 'tự nhiên' của AI.</p></div></div>
+</section>
+
+<div class="fxv"></div><div class="fxs"></div>
+<div class="cr a"></div><div class="cr b"></div><div class="cr c"></div><div class="cr d"></div>
+</div>
+
+<div id="ctr"></div>
+<div id="hint">← → chuyển slide · F toàn màn hình · G danh sách · Home / End</div>
+<div id="grid"></div>
+
+<script>
+const stage=document.getElementById('stage');
+const slides=[...document.querySelectorAll('.slide')];
+const titles=['Mở đầu','Vượt qua AI lập trình sẵn','Kiến trúc hệ thống','MDP / POMDP','Nhận thức & hành động','Reward shaping','PPO','Hai môi trường huấn luyện','Curriculum & Warm-Start','Self-Play','Giao thức đánh giá','Đường học','Kết quả','Trận chiến Boss','Tổng kết'];
+let cur=0;
+function fit(){const s=Math.min(innerWidth/1920,innerHeight/1080);
+  stage.style.transform=`translate(${(innerWidth-1920*s)/2}px,${(innerHeight-1080*s)/2}px) scale(${s})`}
+addEventListener('resize',fit);fit();
+
+/* stagger index */
+slides.forEach(s=>{s.querySelectorAll('[data-a]').forEach((e,i)=>e.style.setProperty('--i',Math.min(i,12)))});
+
+const NS='http://www.w3.org/2000/svg';
+function E(t,a,p){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);p&&p.appendChild(e);return e}
+function T(p,x,y,s,a={}){const t=E('text',Object.assign({x,y},a),p);t.textContent=s;return t}
+
+/* ---------- S2 neural net ---------- */
+(function(){
+  const s=document.getElementById('net2');
+  const inp=[[85,110],[85,200],[85,290]],hid=[[250,50],[250,150],[250,260],[250,350]],cen=[430,205],mid=[590,205],out=[[755,50],[755,205],[755,340]];
+  const path=(a,b)=>`M${a[0]} ${a[1]}C${(a[0]+b[0])/2} ${a[1]} ${(a[0]+b[0])/2} ${b[1]} ${b[0]} ${b[1]}`;
+  const g=E('g',{fill:'none',stroke:'#ff5a4a','stroke-width':1.6,opacity:.8,filter:'url(#glow)'},s);
+  inp.forEach(a=>hid.forEach(b=>E('path',{d:path(a,b),class:'flow',style:`animation-duration:${1+Math.random()*1.5}s`},g)));
+  hid.forEach(a=>E('path',{d:path(a,cen),'stroke-width':2.4,class:'flow'},g));
+  E('path',{d:`M${cen[0]} ${cen[1]}H${mid[0]}`,'stroke-width':5,stroke:'#ff9a8a'},g);
+  out.forEach(b=>E('path',{d:path(mid,b),'stroke-width':2.6,class:'flow'},g));
+  const dots=(arr,r,f)=>arr.forEach(([x,y],i)=>{E('circle',{cx:x,cy:y,r:r+10,fill:'none',stroke:'#ff5a4a','stroke-opacity':.4},s);E('circle',{cx:x,cy:y,r,fill:f(i),filter:'url(#glow)'},s)});
+  dots(inp,16,()=>'#d83a30');dots(hid,16,i=>i%3==0?'#fff':'#ff6a55');dots(out,16,()=>'#d83a30');
+  E('circle',{cx:mid[0],cy:mid[1],r:19,fill:'#fff',filter:'url(#glow2)'},s);
+  const c=E('g',{transform:`translate(${cen[0]} ${cen[1]})`,fill:'none',stroke:'#fff','stroke-width':3,filter:'url(#glow)'},s);
+  E('circle',{r:44},c);E('circle',{r:6,fill:'#ff5a4a'},c);E('path',{d:'M0 -66V-26M0 26V66M-66 0H-26M26 0H66'},c);
+  const p=E('circle',{r:5,fill:'#fff',filter:'url(#glow)'},s);const am=E('animateMotion',{dur:'2.6s',repeatCount:'indefinite',path:`M85 200C165 200 165 150 250 150S340 205 430 205H590C670 205 670 205 755 205`},p);
+})();
+
+/* ---------- S6 radar ---------- */
+(function(){
+  const s=document.getElementById('rad'),cx=635,cy=548,rx=480,ry=232;
+  const P=(a,k=1)=>[cx+rx*k*Math.cos(a*Math.PI/180),cy+ry*k*Math.sin(a*Math.PI/180)];
+  E('rect',{x:94,y:194,width:1110,height:2,fill:'#ff4a3a'},s);E('path',{d:'M94 192V214M1204 192V214M649 192V222M370 194V208M925 194V208',stroke:'#ff4a3a','stroke-width':2},s);
+  T(s,92,184,'HUD',{fill:'#ff8a7a','font-size':18,'font-family':'Roboto Mono'});
+  [['48m',368],['20m',506],['0',644],['20m',780],['48m',918]].forEach(([t,x])=>T(s,x,222,t,{fill:'#ddd','font-size':15,'font-family':'Roboto Mono','text-anchor':'middle'}));
+  [1,.8,.62,.45,.3,.16].forEach((k,i)=>E('ellipse',{cx,cy,rx:rx*k,ry:ry*k,fill:i==0?'rgba(255,255,255,.05)':'none',stroke:'#ddd','stroke-opacity':i==0?.9:.55,'stroke-width':i==0?3:1.5,filter:i==0?'url(#glow)':''},s));
+  E('path',{d:`M${cx-rx-60} ${cy}H${cx+rx+60}M${cx} ${cy-ry-20}V${cy+ry+20}`,stroke:'#ddd','stroke-opacity':.7},s);
+  [['48m',320],['30m',366],['20m',416],['10m',462]].forEach(([t,y])=>T(s,640,y-10,t,{fill:'#ddd','font-size':16,'font-family':'Roboto Mono'}));
+  E('path',{d:`M${cx} ${cy}L${cx+130} ${cy-210}A${rx*.9} ${ry*.9} 0 0 0 ${cx-130} ${cy-210}Z`,fill:'rgba(255,255,255,.07)'},s);
+  const tg=E('g',{transform:`translate(${cx} ${cy})`,filter:'url(#glow)'},s);[78,56,36,18,7].forEach((r,i)=>E('ellipse',{rx:r,ry:r*.45,fill:i%2?'#222':'#fff'},tg));
+  // hazard arcs
+  [[-118,-62,1.04],[-38,-4,1.04],[24,64,1.06],[104,152,1.05]].forEach(([a,b,k])=>{
+    const [x1,y1]=P(a,k),[x2,y2]=P(b,k);
+    E('path',{d:`M${x1} ${y1}A${rx*k} ${ry*k} 0 0 1 ${x2} ${y2}`,fill:'none',stroke:'#ff3b30','stroke-width':34,'stroke-dasharray':'14 10',opacity:.85,filter:'url(#glow)'},s);
+    E('path',{d:`M${x1} ${y1}A${rx*k} ${ry*k} 0 0 1 ${x2} ${y2}`,fill:'none',stroke:'#1a0508','stroke-width':16},s);
+    const [mx,my]=P((a+b)/2,k);
+    E('path',{d:`M${mx} ${my-26}l22 40h-44z`,fill:'rgba(0,0,0,.8)',stroke:'#ff4a3a','stroke-width':3,class:'pulse'},s);T(s,mx,my+8,'!',{fill:'#ff6a55','font-size':26,'font-weight':700,'text-anchor':'middle'});
+  });
+  // arrows
+  [[-60,1.22],[-155,1.2],[-8,1.2],[40,1.2],[112,1.3],[148,1.2],[-110,1.3],[190,1.24]].forEach(([a,k],i)=>{
+    const [x,y]=P(a,k),ang=Math.atan2(cy-y,cx-x)*180/Math.PI;
+    const g=E('g',{transform:`translate(${x} ${y}) rotate(${ang}) scale(.8)`},s);
+    const h=E('g',{style:`animation:nudge 1.6s ease-in-out ${i*.2}s infinite`},g);
+    E('path',{d:'M0 -10L60 -10L60 -28L110 0L60 28L60 10L0 10Z',fill:'#37e08a',opacity:.9,filter:'url(#glow)'},h);
+  });
+  // zombie
+  const z=E('g',{transform:'translate(905 372)'},s);
+  E('ellipse',{cx:0,cy:68,rx:52,ry:20,fill:'none',stroke:'#ff4a3a','stroke-width':2,class:'pulse'},z);
+  E('path',{d:'M0 -48a10 10 0 1 1 .1 0M-18 -26H18L24 22 14 24 12 58 4 58 0 30 -4 58 -12 58 -14 24 -24 22Z',fill:'rgba(255,255,255,.12)',stroke:'#ff8a7a','stroke-width':1.6,filter:'url(#glow)'},z);
+  E('rect',{x:-34,y:-84,width:90,height:12,fill:'#2a0a0e',stroke:'#ff4a3a'},z);E('rect',{x:-32,y:-82,width:52,height:8,fill:'#ff4a3a'},z);
+})();
+document.head.insertAdjacentHTML('beforeend','<style>@keyframes nudge{0%,100%{transform:translateX(0);opacity:.3}50%{transform:translateX(34px);opacity:1}}</style>');
+
+/* ---------- S8 maps ---------- */
+(function(){
+  const s=document.getElementById('gridmap');
+  const g=E('g',{stroke:'rgba(255,255,255,.35)','stroke-width':1},s);
+  for(let i=0;i<=11;i++){E('line',{x1:150+i*40,y1:30,x2:150+i*40,y2:370},g)}for(let j=0;j<=8;j++)E('line',{x1:150,y1:30+j*42.5,x2:590,y2:30+j*42.5},g);
+  E('rect',{x:150,y:30,width:440,height:340,fill:'none',stroke:'#fff','stroke-width':3},s);
+  const wall=(x,y,w,h,n,v)=>{for(let i=0;i<n;i++){const xx=v?x:x+i*(w/n),yy=v?y+i*(h/n):y;E('rect',{x:xx+2,y:yy+2,width:(v?w:w/n)-4,height:(v?h/n:h)-4,fill:'rgba(255,60,50,.18)',stroke:'#ff4a3a','stroke-width':2.4,filter:'url(#glow)'},s)}};
+  wall(190,80,160,42,4,false);wall(240,225,120,42,3,false);wall(500,150,40,170,4,true);
+  E('path',{d:'M262 186L505 108',stroke:'#fff','stroke-width':2.2,'stroke-dasharray':'8 7',class:'flow',fill:'none','marker-end':'url(#mW)'},s);
+  E('path',{d:'M262 214V300H380',stroke:'#fff','stroke-width':2,'stroke-dasharray':'8 7',class:'flow',fill:'none'},s);
+  E('path',{d:'M520 300V148',stroke:'#fff','stroke-width':2,'stroke-dasharray':'8 7',fill:'none','marker-end':'url(#mW)'},s);
+  const z=E('g',{transform:'translate(262 186)'},s);E('circle',{r:19,fill:'#2a0a0e',stroke:'#ff4a3a','stroke-width':3,filter:'url(#glow)'},z);T(z,0,7,'Z',{fill:'#ff6a55','font-size':20,'font-weight':700,'text-anchor':'middle'});
+  const p=E('g',{transform:'translate(505 106)'},s);E('circle',{r:19,fill:'#111',stroke:'#fff','stroke-width':3,class:'pulse'},p);T(p,0,7,'P',{fill:'#fff','font-size':20,'font-weight':700,'text-anchor':'middle'});
+  const m={'font-family':'Roboto Mono','font-size':12,fill:'#ddd'};T(s,24,40,'POS: [12.5, 8.2]',m);T(s,24,56,'DIST: 4.1m',m);T(s,640,40,'POS: [12, 8.2]',m);T(s,640,56,'DIST: 3.31m',m);T(s,24,360,'POS: [12.5, 8.2]',m);T(s,24,376,'DIST: 4.1m',m);
+  const d=E('circle',{r:5,fill:'#ff6a55',filter:'url(#glow)'},s);E('animateMotion',{dur:'3.4s',repeatCount:'indefinite',path:'M262 186L505 108'},d);
+})();
+(function(){
+  const s=document.getElementById('arena');
+  const iso=(x,y,w,d,h,f)=>{ // x,y base-front corner
+    const a=[x,y],b=[x+w,y-w*.3],c=[x+w-d,y-w*.3-d*.5],e=[x-d,y-d*.5];
+    const up=p=>[p[0],p[1]-h];
+    const poly=(pts,fill)=>E('polygon',{points:pts.map(p=>p.join(',')).join(' '),fill,stroke:'#ff5a4a','stroke-width':1.8,'stroke-opacity':.9},s);
+    poly([up(a),up(b),up(c),up(e)],'rgba(255,255,255,.06)');poly([a,b,up(b),up(a)],'rgba(255,60,50,.12)');poly([e,a,up(a),up(e)],'rgba(255,60,50,.2)');
+  };
+  const gr=E('g',{stroke:'rgba(255,90,80,.25)'},s);for(let i=0;i<16;i++){E('path',{d:`M${i*52-40} 402L${i*52+160} 120`},gr);}for(let j=0;j<8;j++)E('path',{d:`M0 ${190+j*32}H762`},gr);
+  iso(330,150,140,80,90);iso(420,120,90,60,70);iso(120,190,110,70,100);iso(500,310,160,80,60);iso(250,330,120,50,50);iso(600,220,110,60,110);
+  const wl=E('g',{stroke:'rgba(255,255,255,.65)',fill:'rgba(255,255,255,.06)','stroke-width':1.5},s);E('path',{d:'M20 280L180 250 180 300 20 340ZM560 340L740 300 740 360 560 400Z'},wl);
+  const man=(x,y,c)=>{const g=E('g',{transform:`translate(${x} ${y})`,fill:'none',stroke:c,'stroke-width':2.2},s);E('circle',{cx:0,cy:-44,r:7},g);E('path',{d:'M0 -36V-8L-10 16M0 -8L10 16M0 -30L-12 -14M0 -30L14 -22'},g);E('ellipse',{cx:0,cy:18,rx:28,ry:10,stroke:'#ff4a3a'},g)};
+  man(150,360,'#ddd');man(560,380,'#ddd');man(680,230,'#fff');man(410,250,'#ddd');
+  E('polygon',{points:'170,340 330,290 320,350',fill:'rgba(255,255,255,.3)'},s);E('polygon',{points:'570,350 440,310 430,360',fill:'rgba(255,255,255,.28)'},s);
+  const m={'font-family':'Roboto Mono','font-size':12,fill:'#ddd'};T(s,24,30,'3D: [12.5, 8.2]',m);T(s,24,46,'VE: -2.3m',m);T(s,24,62,'VELOCITY: 0',m);
+  E('rect',{x:640,y:30,width:100,height:10,fill:'none',stroke:'#fff'},s);E('rect',{x:642,y:32,width:60,height:6,fill:'#fff'},s);E('rect',{x:660,y:66,width:80,height:10,fill:'none',stroke:'#ff4a3a'},s);E('rect',{x:662,y:68,width:56,height:6,fill:'#ff4a3a'},s);
+  const sc=E('rect',{x:0,y:0,width:762,height:5,fill:'rgba(255,90,80,.55)'},s);E('animate',{attributeName:'y',values:'0;400;0',dur:'6s',repeatCount:'indefinite'},sc);
+})();
+
+/* ---------- S9 stairs + warm start ---------- */
+(function(){
+  const s=document.getElementById('stairs');
+  const dia=(cx,cy,w,h,fill,sw)=>E('polygon',{points:`${cx},${cy-h} ${cx+w},${cy} ${cx},${cy+h} ${cx-w},${cy}`,fill:fill||'#080305',stroke:'#ff4a3a','stroke-width':sw||2.4,filter:'url(#glow)'},s);
+  const A=[250,810],B=[500,590],C=[752,350];
+  E('path',{d:'M200 650L505 330',stroke:'#ff4a3a','stroke-width':4,fill:'none',filter:'url(#glow)','marker-end':'url(#mR)'},s);
+  function steps(p,q){for(let i=1;i<=3;i++){const t=i/4;dia(p[0]+(q[0]-p[0])*t,p[1]+(q[1]-p[1])*t,70,34-(i%2)*0,'#0a0406',2)}}
+  [A,B,C].forEach(()=>0);
+  dia(...C,128,70);dia(C[0],C[1],86,46,'#0a0406',2.4);dia(C[0],C[1],62,32,'#120508',2);
+  steps(B,C);
+  dia(...B,128,70);dia(B[0],B[1],86,46,'#0a0406',2.4);dia(B[0],B[1],62,32,'#120508',2);
+  steps(A,B);
+  dia(...A,128,70);dia(A[0],A[1],86,46,'#0a0406',2.4);dia(A[0],A[1],62,32,'#120508',2);
+  [[440,758],[670,520]].forEach(([x,y])=>{const g=E('g',{transform:`translate(${x} ${y}) rotate(-38)`,fill:'#ff4a3a',opacity:.8},s);[0,16,32].forEach(o=>E('path',{d:`M${o} -12l16 12-16 12z`,class:'pulse',style:`animation-delay:${o/40}s`},g))});
+  const ball=E('circle',{r:7,fill:'#fff',filter:'url(#glow)'},s);E('animateMotion',{dur:'4s',repeatCount:'indefinite',path:`M${A[0]} ${A[1]}L${B[0]} ${B[1]}L${C[0]} ${C[1]}`},ball);
+})();
+(function(){
+  const s=document.getElementById('ws');
+  const cube=(x,y,w,h,label,sub)=>{const d=26;
+    E('polygon',{points:`${x},${y} ${x+d},${y-d*.6} ${x+w+d},${y-d*.6} ${x+w},${y}`,fill:'#1a070b',stroke:'#ff4a3a','stroke-width':2.2},s);
+    E('polygon',{points:`${x+w},${y} ${x+w+d},${y-d*.6} ${x+w+d},${y+h-d*.6} ${x+w},${y+h}`,fill:'#12050a',stroke:'#ff4a3a','stroke-width':2.2},s);
+    E('rect',{x,y,width:w,height:h,fill:'#0a0406',stroke:'#ff4a3a','stroke-width':2.2,filter:'url(#glow)'},s);
+    return [x,y]};
+  const chip=(x,y,w,t)=>{E('rect',{x,y,width:w,height:30,rx:5,fill:'#14060a',stroke:'#ff6a55','stroke-width':1.8},s);T(s,x+w/2,y+21,t,{fill:'#fff','font-size':17,'font-family':'Roboto Mono','text-anchor':'middle'})};
+  T(s,160,34,'Old Action Layer',{fill:'#ddd','font-size':20,'font-family':'Roboto Mono','text-anchor':'middle'});T(s,160,56,'(9 Actions)',{fill:'#ddd','font-size':20,'font-family':'Roboto Mono','text-anchor':'middle'});
+  cube(60,90,170,150);chip(112,110,66,'W');chip(112,170,66,'b');
+  T(s,580,20,'New Action Layer',{fill:'#ddd','font-size':20,'font-family':'Roboto Mono','text-anchor':'middle'});T(s,580,42,'(9 New Actions)',{fill:'#ddd','font-size':20,'font-family':'Roboto Mono','text-anchor':'middle'});
+  cube(470,80,220,110);chip(498,95,164,'W_clone');chip(498,138,164,'b_init = -1.5');
+  cube(470,220,220,110);chip(498,236,164,'W_original');chip(498,280,164,'b_original');
+  T(s,580,360,'Original Action Layer (9 Old Actions)',{fill:'#ddd','font-size':17,'font-family':'Roboto Mono','text-anchor':'middle'});
+  E('path',{d:'M290 165H380V120H466M380 165V270H466',fill:'none',stroke:'#fff','stroke-width':2.4,class:'flow','marker-end':'url(#mW)'},s);
+})();
+
+/* ---------- S10 cycle arrows ---------- */
+(function(){
+  const s=document.getElementById('cyc'),cx=955,cy=535,R=348;
+  const P=a=>[cx+R*Math.cos(a*Math.PI/180),cy+R*Math.sin(a*Math.PI/180)];
+  [[-56,-28,'#ff4a3a'],[28,56,'#ff4a3a'],[124,152,'#8affc0'],[208,236,'#ddd']].forEach(([a,b,c],i)=>{
+    const [x1,y1]=P(a),[x2,y2]=P(b);
+    E('path',{d:`M${x1} ${y1}A${R} ${R} 0 0 1 ${x2} ${y2}`,fill:'none',stroke:c,'stroke-width':34,opacity:.28,filter:'url(#glow2)'},s);
+    E('path',{d:`M${x1} ${y1}A${R} ${R} 0 0 1 ${x2} ${y2}`,fill:'none',stroke:c,'stroke-width':8,'stroke-dasharray':'18 12',class:'flow',filter:'url(#glow)',style:'animation-duration:.9s'},s);
+    const ang=b+90,g=E('g',{transform:`translate(${x2} ${y2}) rotate(${ang})`},s);E('path',{d:'M-30 -6L22 -6 22 -26 62 0 22 26 22 6-30 6Z',fill:c,filter:'url(#glow)',opacity:.95,transform:'rotate(-90) translate(-16 0)'},g);
+  });
+  const g=E('g',{stroke:'#ff4a3a',fill:'none','stroke-opacity':.5},s);E('path',{d:'M955 480V590M900 535H1010'},g);E('circle',{cx:955,cy:535,r:44,class:'spin','stroke-dasharray':'6 8'},g);
+})();
+
+/* ---------- S12 learning curves (dữ liệu thật: models/learning_curve_lv*_seed*.csv) ---------- */
+const LC={"1": {"steps": [0, 20480, 40960, 61440, 81920, 102400, 122880, 143360, 163840, 184320, 204800, 225280, 245760, 266240], "seeds": [[-0.3773, 1.8404, 1.7378, 1.6988, 1.9478, 1.8584, 1.896, 1.8455, 1.8565, 1.8771, 1.8712, 1.8749, 1.773, 1.8836], [-0.555, 0.9481, 1.6326, 1.3498, 1.6424, 1.6437, 1.7261, 1.7062, 1.8215, 1.8518, 1.8866, 1.9694, 1.9659, 2.0336], [-0.4022, 1.7774, 2.0399, 1.7111, 1.7464, 1.7352, 1.7722, 1.5562, 1.8278, 1.9653, 1.8456, 1.8715, 2.037, 1.8512]], "mean": [-0.44483333333333336, 1.5219666666666667, 1.8034333333333332, 1.586566666666667, 1.7788666666666666, 1.7457666666666667, 1.7980999999999998, 1.7026333333333332, 1.8352666666666666, 1.8980666666666668, 1.8678, 1.9052666666666667, 1.9253, 1.9227999999999998], "path": 1.6745, "cross": 40960}, "2": {"steps": [0, 20480, 40960, 61440, 81920, 102400, 122880, 143360, 163840, 184320, 204800, 225280, 245760, 266240], "seeds": [[-0.258, 1.4051, 1.4533, 1.6035, 1.6063, 1.8259, 1.6776, 2.0287, 2.0458, 2.0948, 1.917, 2.1086, 1.8949, 1.9651], [-0.6924, 1.9454, 1.6628, 1.4549, 1.5772, 1.6698, 1.685, 1.9871, 1.7833, 1.6927, 1.9373, 1.8065, 1.872, 2.1247], [-0.6053, 1.2077, 1.4844, 1.5559, 1.5813, 1.7428, 1.3231, 1.8364, 1.8707, 1.897, 1.8868, 2.1363, 2.1247, 2.1094]], "mean": [-0.5185666666666666, 1.5194, 1.5335, 1.5381, 1.5882666666666667, 1.7461666666666666, 1.5618999999999998, 1.9507333333333332, 1.8999333333333333, 1.8948333333333334, 1.9137000000000002, 2.0171333333333332, 1.9638666666666669, 2.0664], "path": 1.7847, "cross": 143360}, "4": {"steps": [0, 20480, 40960, 61440, 81920, 102400, 122880, 143360, 163840, 184320, 204800, 225280, 245760, 266240, 286720, 307200], "seeds": [[-0.644, 1.1173, 0.8942, 0.9825, 0.879, 0.8372, 0.939, 0.836, 0.8619, 0.6303, 0.7358, 0.748, 0.696, 0.9411, 1.0977, 0.7855], [-0.8594, 0.6758, 0.8758, 0.6681, 0.7663, 0.8228, 0.899, 0.8884, 0.7991, 1.0353, 0.9684, 0.9642, 0.9573, 0.9139, 1.0219, 1.0248], [-0.968, 0.8121, 0.7319, 0.693, 0.8848, 0.8519, 0.7532, 0.8685, 0.8202, 0.9916, 0.9004, 0.9768, 1.0625, 1.0129, 1.0516, 1.0442]], "mean": [-0.8238, 0.8684, 0.8339666666666666, 0.7812, 0.8433666666666667, 0.8372999999999999, 0.8637333333333332, 0.8643000000000001, 0.8270666666666667, 0.8857333333333334, 0.8682, 0.8963333333333333, 0.9052666666666666, 0.9559666666666667, 1.0570666666666666, 0.9514999999999999], "path": 0.885, "cross": 184320}};
+function lcurve(id,cfg){
+  const d=LC[cfg.lv],s=document.getElementById(id),L=66,R=500,Tp=14,B=276,xm=cfg.xm,ym=cfg.ym;
+  const X=x=>L+(R-L)*x/xm,Y=y=>B-(B-Tp)*Math.max(0,y)/ym;
+  E('rect',{x:L,y:Tp,width:R-L,height:B-Tp,fill:'rgba(0,0,0,.4)',stroke:'#8a8a8a'},s);
+  cfg.yt.forEach(v=>{T(s,L-8,Y(v)+5,v.toFixed(1),{fill:'#ddd','font-size':16,'text-anchor':'end','font-family':'Roboto Mono'});E('line',{x1:L,x2:L+5,y1:Y(v),y2:Y(v),stroke:'#bbb'},s)});
+  cfg.xt.forEach(v=>{T(s,X(v*1000),B+20,v?v+'k':'0',{fill:'#ddd','font-size':16,'text-anchor':'middle','font-family':'Roboto Mono'})});
+  T(s,(L+R)/2,B+46,'Bước huấn luyện (nghìn)',{fill:'#ddd','font-size':17,'text-anchor':'middle'});
+  const yl=T(s,16,(Tp+B)/2,'Return (deterministic)',{fill:'#ddd','font-size':14,'text-anchor':'middle'});yl.setAttribute('transform',`rotate(-90 16 ${(Tp+B)/2})`);
+  const line=ys=>ys.map((y,i)=>(i?'L':'M')+X(d.steps[i])+' '+Y(y)).join('');
+  E('path',{d:`M${X(0)} ${Y(d.path)}H${X(xm)}`,stroke:'#9fb6c8','stroke-width':2,'stroke-dasharray':'8 6',fill:'none'},s);
+  d.seeds.forEach(ys=>E('path',{d:line(ys),class:'ln',pathLength:1,stroke:'#ff8a7a','stroke-width':1.4,opacity:.7},s));
+  E('path',{d:line(d.mean),class:'ln',pathLength:1,stroke:'#ff3b30','stroke-width':5,filter:'url(#glow)'},s);
+  if(d.cross){const cx=X(d.cross),cy=Y(d.path);
+    const st=E('g',{class:'fade'},s);E('circle',{cx,cy,r:16,fill:'rgba(255,255,255,.35)',filter:'url(#glow2)',class:'pulse'},st);E('circle',{cx,cy,r:5,fill:'#fff'},st)}
+  const lg=[['PPO (trung bình 3 seed)','#ff3b30',4],['path (baseline)','#9fb6c8',2],['từng seed','#ff8a7a',1.5]];
+  E('rect',{x:238,y:190,width:258,height:76,fill:'rgba(0,0,0,.6)',stroke:'#666'},s);
+  lg.forEach(([t,c,w],i)=>{E('path',{d:`M246 ${206+i*22}h26`,stroke:c,'stroke-width':w,'stroke-dasharray':i==1?'6 4':''},s);T(s,280,211+i*22,t,{fill:'#eee','font-size':15,'font-family':'Roboto Mono'})});
+}
+lcurve('lc1',{lv:1,xm:270000,ym:2.2,yt:[0,.5,1,1.5,2],xt:[0,100,200]});
+lcurve('lc2',{lv:2,xm:270000,ym:2.2,yt:[0,.5,1,1.5,2],xt:[0,100,200]});
+lcurve('lc4',{lv:4,xm:310000,ym:1.2,yt:[0,.2,.4,.6,.8,1],xt:[0,100,200,300]});
+
+/* ---------- S13 bars ---------- */
+(function(){
+  const s=document.getElementById('bars'),L=96,R=966,Tp=70,B=612,lo=-1,hi=4.7;
+  const Y=v=>B-(B-Tp)*(v-lo)/(hi-lo);
+  T(s,520,46,'Return trung bình (100 episode mỗi ô, cao = tốt, nguồn eval_current.csv)',{fill:'#eee','font-size':27,'text-anchor':'middle'});
+  E('rect',{x:L,y:Tp,width:R-L,height:B-Tp,fill:'rgba(0,0,0,.35)',stroke:'#aaa'},s);
+  [-1,0,1,2,3,4].forEach(v=>{T(s,L-12,Y(v)+6,v,{fill:'#ddd','font-size':20,'text-anchor':'end'});E('line',{x1:L,x2:R,y1:Y(v),y2:Y(v),stroke:'rgba(255,255,255,.12)'},s)});
+  const yl=T(s,34,(Tp+B)/2,'Return trung bình / episode',{fill:'#ddd','font-size':20,'text-anchor':'middle'});yl.setAttribute('transform',`rotate(-90 34 ${(Tp+B)/2})`);
+  T(s,(L+R)/2,B+62,'Màn',{fill:'#ddd','font-size':22,'text-anchor':'middle'});
+  const names=['random','chase','path','ppo'],cols=['#9a9a9a','#7f9bb5','#4d6b88','#ff1a1a'];
+  const D=[[-.791,1.610,1.675,2.122],[-.703,1.289,1.785,2.434],[-.500,.856,1.392,1.777],[-.774,.136,.885,1.081],[.729,4.372,4.423,3.891]]; /* models/eval_current.csv */
+  const gw=(R-L)/5,bw=36;
+  D.forEach((g,gi)=>{const x0=L+gi*gw+(gw-bw*4)/2;
+    g.forEach((v,i)=>{const y0=Y(0),y1=Y(v);E('rect',{x:x0+i*bw,y:Math.min(y0,y1),width:bw-1,height:Math.abs(y1-y0),fill:cols[i],class:'bar'+(v<0?' neg':''),style:`--i:${gi*4+i}`,filter:i==3?'url(#glow)':''},s)});
+    T(s,L+gi*gw+gw/2,B+30,gi+1,{fill:'#ddd','font-size':22,'text-anchor':'middle'})});
+  E('rect',{x:112,y:84,width:150,height:122,fill:'rgba(0,0,0,.6)',stroke:'#888'},s);
+  [3,0,1,2].forEach((k,i)=>{E('rect',{x:124,y:98+i*28,width:36,height:14,fill:cols[k]},s);T(s,172,110+i*28,names[k],{fill:'#eee','font-size':20})});
+})();
+let tcT=null;
+function tick(){return;const e=document.getElementById('tc');let n=0;clearInterval(tcT);tcT=setInterval(()=>{n++;const f=(89+n)%100,sec=(32+Math.floor((89+n)/100))%60;e.textContent='00:14:'+String(sec).padStart(2,'0')+':'+String(f).padStart(2,'0')},40)}
+
+/* ---------- S14 state machine ---------- */
+let smT=null;
+function stateMachine(on){clearInterval(smT);const e=[1,2,3].map(i=>document.getElementById('st'+i));e.forEach(x=>x.classList.remove('on'));
+  if(!on)return;let k=0;const step=()=>{e.forEach((x,i)=>x.classList.toggle('on',i===k%3));k++};step();smT=setInterval(step,900)}
+
+/* ---------- nav ---------- */
+function show(i){
+  cur=Math.max(0,Math.min(slides.length-1,i));
+  slides.forEach((s,k)=>s.classList.toggle('active',k===cur));
+  document.getElementById('prog').style.width=((cur+1)/slides.length*100)+'%';
+  document.getElementById('ctr').textContent=String(cur+1).padStart(2,'0')+' / '+String(slides.length).padStart(2,'0');
+  document.querySelectorAll('.pw').forEach(p=>{p.style.width='0';setTimeout(()=>p.style.width='100%',60)});
+  if(cur===12)tick();else clearInterval(tcT);
+  stateMachine(cur===13);
+  try{history.replaceState(null,'','#'+(cur+1))}catch(e){}
+  document.querySelectorAll('#grid button').forEach((b,k)=>b.classList.toggle('cur',k===cur));
+}
+function go(d){show(cur+d)}
+const grid=document.getElementById('grid');
+addEventListener('keydown',e=>{
+  if(['ArrowRight','ArrowDown','PageDown',' ','Enter'].includes(e.key)){e.preventDefault();go(1)}
+  else if(['ArrowLeft','ArrowUp','PageUp','Backspace'].includes(e.key)){e.preventDefault();go(-1)}
+  else if(e.key==='Home')show(0);else if(e.key==='End')show(slides.length-1);
+  else if(e.key==='f'||e.key==='F'){try{document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()}catch(_){}}
+  else if(e.key==='g'||e.key==='G')grid.classList.toggle('on');
+  else if(e.key==='Escape')grid.classList.remove('on');
+});
+let tx=null;
+addEventListener('touchstart',e=>tx=e.touches[0].clientX);
+addEventListener('touchend',e=>{if(tx===null)return;const d=e.changedTouches[0].clientX-tx;if(Math.abs(d)>50)go(d<0?1:-1);tx=null});
+titles.forEach((t,i)=>{const b=document.createElement('button');b.textContent=String(i+1).padStart(2,'0')+' — '+t;b.onclick=()=>{grid.classList.remove('on');show(i)};grid.appendChild(b)});
+setTimeout(()=>{document.getElementById('hint').style.opacity=0},5000);
+let startAt=1;try{startAt=parseInt(location.hash.slice(1))||1}catch(e){}
+show(startAt-1);
+</script>
+</body>
+</html>
