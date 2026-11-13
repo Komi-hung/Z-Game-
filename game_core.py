@@ -79,7 +79,7 @@ class Zombie:
         return self.state != "dead"
 
 
-from numpy_policy import load_policy
+from numpy_policy import load_policy, algo_name
 
 
 class ModelBank:
@@ -105,7 +105,7 @@ class ModelBank:
                     m = None
                 self.cache[path] = m
             if self.cache[path] is not None:
-                return self.cache[path], os.path.basename(path)
+                return self.cache[path], f"{algo_name(path).upper()} {os.path.basename(path)}"
         return None, None
 
 
@@ -138,7 +138,7 @@ class World:
         self.model = None
         if self.controller == "ppo":
             self.model, name = self.bank.get(level)
-            self.ai_name = f"PPO {name}" if self.model else "đuổi thẳng (chưa có model - chạy train.py)"
+            self.ai_name = name if self.model else "đuổi thẳng (chưa có model - chạy train.py)"
         else:
             self.ai_name = {"path": "viết tay: đi theo đường", "chase": "viết tay: đuổi thẳng"}[self.controller]
         self.state, self.decision_t, self.play_time = "play", 0.0, 0.0

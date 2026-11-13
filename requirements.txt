@@ -3,3 +3,4 @@ gymnasium
 stable-baselines3
 pygame
 pillow
+sb3-contrib

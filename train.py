@@ -53,24 +53,43 @@ def evaluate(policy, level, n_episodes=100, seed=10_000):
     """Chạy n episode trên bản đồ của màn này, đếm kết quả."""
     env = ZombieEnv(level=level, replay_prob=0.0)
     counts = {"caught": 0, "won": 0, "killed": 0, "timeout": 0}
-    total_r = aimed = stuck = hp_lost = hits = 0.0
+    total_r = aimed = stuck = hp_lost = hits = shots = dodged = 0.0
+    ep_rewards, ep_wins = [], []        # từng episode (để tính khoảng tin cậy / so sánh theo cặp)
     for ep in range(n_episodes):
         obs, _ = env.reset(seed=seed + ep)
-        done = False
+        done, ep_r = False, 0.0
         while not done:
             obs, r, term, trunc, info = env.step(policy(obs, env))
-            total_r += r
+            ep_r += r
             done = term or trunc
+        total_r += ep_r
+        ep_rewards.append(ep_r)
+        ep_wins.append(int(info["outcome"] in ("caught", "won")))
         counts[info["outcome"]] += 1
         aimed += info["aimed_frac"]
         stuck += info["stuck_frac"]
         hp_lost += info["hp_lost"]
         hits += info["hits_dealt"]
+        shots += info["shots"]
+        dodged += info["dodged"]
     n = n_episodes
     # catch: zombie thường áp sát được / boss hạ được người chơi giả
     return dict(mean_reward=total_r / n, catch=(counts["caught"] + counts["won"]) / n,
                 killed=counts["killed"] / n, timeout=counts["timeout"] / n, aimed=aimed / n,
-                stuck=stuck / n, hp_lost=hp_lost / n, hits=hits / n)
+                stuck=stuck / n, hp_lost=hp_lost / n, hits=hits / n,
+                dodge=dodged / max(shots, 1),   # tỉ lệ phát bắn của người chơi giả bị né (trượt)
+                ep_rewards=ep_rewards, ep_wins=ep_wins)
+
+
+def _zigzag(o, e):
+    """Đi theo đường nhưng lệch ±30° xen kẽ mỗi 0.4 giây (né đạn viết tay), vào tầm thì đánh như path."""
+    import math
+    from zombie_brain import nearest_action
+    if math.hypot(e.bot.x - e.zx, e.bot.y - e.zy) < 1.6:
+        return baseline_action("path", e.zx, e.zy, e.bot.x, e.bot.y, e.path, e.attack.ready, e.st["attack_range"])
+    ux, uy = e.path[0], e.path[1]
+    a = (1 if (e.steps // 4) % 2 else -1) * math.pi / 6
+    return nearest_action(ux * math.cos(a) - uy * math.sin(a), ux * math.sin(a) + uy * math.cos(a))
 
 
 BASELINES = {
@@ -81,6 +100,8 @@ BASELINES = {
     # đi theo đường ngắn nhất (biết vòng qua tường nhưng không né đạn), vào tầm là đánh
     "path": lambda o, e: baseline_action("path", e.zx, e.zy, e.bot.x, e.bot.y, e.path,
                                          e.attack.ready, e.st["attack_range"]),
+    # như path nhưng chạy zig-zag để né đạn (mốc "né viết tay" cho màn boss)
+    "zigzag": _zigzag,
 }
 
 

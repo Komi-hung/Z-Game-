@@ -65,7 +65,7 @@ class BossMods:
         if phase2:
             mult *= BOSS["phase2_speed_mult"]
         self.charge_cd -= dt
-        if (phase2 and self.charge_t <= 0 and self.charge_cd <= 0
+        if (BOSS.get("scripted_charge", True) and phase2 and self.charge_t <= 0 and self.charge_cd <= 0
                 and dist > BOSS["charge_min_dist"] and los):
             self.charge_t, self.charge_cd = BOSS["charge_time"], BOSS["charge_cooldown"]
         charging = self.charge_t > 0

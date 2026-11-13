@@ -36,6 +36,7 @@ class PlayerBot:
         self.aim_err, self.aim_timer = 0.0, 0.0
         self.forward = self.strafe = 0
         self.move_timer = 0.0
+        self.shots = self.shot_hits = 0                   # để đo boss/zombie né được bao nhiêu phát
 
     def step(self, dt, zx, zy, zr):
         """Cập nhật bot một bước. Trả về damage gây cho zombie (0 nếu trượt)."""
@@ -113,13 +114,22 @@ class PlayerBot:
         if self.ammo <= 0:
             self.reload_t = self.weapon["reload"]
             return 0.0
-        if sees and self.cooldown <= 0 and dist <= self.weapon["range"]:
+        # full_rate (màn boss): bắn đúng tốc độ súng như game 60 FPS, một bước 0.1 giây có thể nổ nhiều phát.
+        # Không có cờ này thì mỗi bước tối đa 1 phát (M4A1 chỉ còn ~4 phát/giây thay vì 8).
+        full = self.skill.get("full_rate", False)
+        if full:
+            self.cooldown = max(self.cooldown, -dt)
+        damage = 0.0
+        while sees and self.cooldown <= 0 and dist <= self.weapon["range"] and self.ammo > 0:
             tolerance = math.asin(min(1.0, zr / max(dist, 1e-6))) + 0.05
-            if abs(angle_diff(math.atan2(sy - self.y, sx - self.x), self.angle)) < tolerance:
-                self.ammo -= 1
-                self.cooldown = self.weapon["cooldown"]
-                hit, _, _ = resolve_shot(self.grid, self.x, self.y, self.angle, self.weapon,
-                                         [(zx, zy, zr)], self.rng)   # trúng hay không tính theo vị trí THẬT
-                if hit is not None:
-                    return float(self.weapon["damage"])
-        return 0.0
+            if abs(angle_diff(math.atan2(sy - self.y, sx - self.x), self.angle)) >= tolerance:
+                break
+            self.ammo -= 1
+            self.shots += 1
+            self.cooldown = self.cooldown + self.weapon["cooldown"] if full else self.weapon["cooldown"]
+            hit, _, _ = resolve_shot(self.grid, self.x, self.y, self.angle, self.weapon,
+                                     [(zx, zy, zr)], self.rng)   # trúng hay không tính theo vị trí THẬT
+            if hit is not None:
+                self.shot_hits += 1
+                damage += float(self.weapon["damage"])
+        return damage

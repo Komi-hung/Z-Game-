@@ -35,14 +35,16 @@ ZOMBIES = {
                    attack_cooldown=1.0, windup=0.40, lunge=0.4),
     "skinny": dict(name="Zombie ốm",  hp=50,  damage=10, speed=4.3, radius=0.18, attack_range=0.60,
                    attack_cooldown=0.8, windup=0.30, lunge=0.4),
-    "boss":   dict(name="Boss",       hp=1500, damage=35, speed=3.0, radius=0.35, attack_range=0.90,
+    "boss":   dict(name="Boss",       hp=1300, damage=30, speed=3.0, radius=0.35, attack_range=0.90,
                    attack_cooldown=0.9, windup=0.40, lunge=0.5),
 }
 # lunge: khi đang vung tay, zombie vẫn nhích theo người chơi với (lunge x tốc độ) -> khó né hơn
 SPRITE_WIDTH_FACTOR = 1.15   # bề ngang hình vẽ = 2 x radius x hệ số này
 
 # Boss = não PPO + các pha viết tay
-BOSS = dict(phase2_hp=0.5, phase2_speed_mult=1.3,
+# scripted_charge=False: tắt cú "lao tới" viết tay để mọi bước di chuyển của boss đều do model quyết định
+# (trước đây boss mạnh nhờ chỉ số 1500 máu + lao tới tự động, boss đi thẳng không né vẫn thắng 90%).
+BOSS = dict(phase2_hp=0.5, phase2_speed_mult=1.3, scripted_charge=False,
             charge_min_dist=4.0, charge_time=1.0, charge_cooldown=4.0, charge_speed_mult=2.0)
 
 # Gỡ kẹt (lưới an toàn trong game): nếu zombie gần như đứng im quá lâu thì đi theo đường tìm được
@@ -172,7 +174,11 @@ LEVELS = [
     # Màn 5: người chơi đấu tay đôi với boss. Boss được train lâu nhất, tiếp nối từ model màn 4
     # và ôn lại bản đồ của cả 4 màn trước.
     dict(name="Màn 5 - Boss", train_steps=800_000,
-         bot=dict(turn=1.00, reaction=1, aim_noise=0.03, kite=1.0),
+         # reaction=3 (0.3 giây, gần người thật): với reaction=1 bot ngắm như aimbot, né vô ích nên boss chỉ học lao vào
+         # ăn damage. Đo bằng boss zig-zag viết tay: reaction=1 -> né THUA đi thẳng (33% vs 40%); reaction=3 -> né THẮNG (52% vs 42%).
+         # weapon + full_rate: người chơi giả cầm M4A1 và bắn đúng 8 phát/giây như game thật. Trước đây một nửa số trận
+         # bot chỉ cầm súng lục và M4A1 chỉ bắn 4 phát/giây -> boss cân theo sân tập bị hạ trong ~8 giây ở game thật.
+         bot=dict(turn=1.00, reaction=3, aim_noise=0.03, kite=1.0, weapon="m4a1", full_rate=True),
          train_mix={"boss": 1.0},
          waves=[{"boss": 1}],
          map=[

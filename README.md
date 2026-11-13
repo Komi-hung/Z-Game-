@@ -22,6 +22,8 @@ Game bắn zombie góc nhìn thứ nhất (pixel, raycasting kiểu Wolfenstein)
 | `evaluate_match.py` | Cho người chơi đấu N trận với zombie PPO và zombie viết tay, đếm ai thắng | Đánh giá |
 | `zombie_world_env.py` | Zombie luyện **ngay trong game thật** với agent người chơi (đối kháng) | **Có** |
 | `league.py` | Self-play theo vòng: zombie học -> giữ bản tốt nhất -> người chơi học lại -> đo | **Có** |
+| `compare_algos.py` | So sánh PPO với A2C, TRPO, DQN trên cùng curriculum: mỗi thuật toán "đạt tới màn" mấy | Đánh giá |
+| `numpy_policy.py` | Chạy model không cần PyTorch (khi Windows chặn torch DLL) | Chỉ dùng model |
 | `tools/learning_curve.py` | Huấn luyện lại từ đầu một màn với nhiều seed, ghi đường học (return theo số bước) và mốc baseline | Đánh giá |
 
 ## Cài đặt (Windows, VS Code)
@@ -40,6 +42,7 @@ python game.py               # chơi từ màn 1
 python game.py --level 5     # vào thẳng màn boss
 python game.py --zombies path    # chơi với zombie viết tay để tự so sánh với zombie RL
 python game.py --watch-agent     # xem RL agent người chơi tự chơi
+python game.py --zombie-algo dqn # chơi với zombie do DQN huấn luyện (a2c, trpo, dqn, dqn_tgt; tạo bởi compare_algos.py)
 python train.py              # train lại cả 5 màn (số bước mỗi màn nằm trong config.py)
 python train.py --level 5    # chỉ train lại boss
 python train.py --scale 0.1  # train thử nhanh với 10% số bước
@@ -68,7 +71,9 @@ Muốn thay hình súng: đặt ảnh mới vào `tools/weapon_src/` (1 hàng 6 
 | Mập | `assets/zombie-heavy` | 200 | 25 | 1.2 |
 | Vừa | `assets/zombie-vest` | 100 | 10 | 2.4 |
 | Ốm | `assets/zombie-skinny` | 50 | 10 | 4.3 |
-| Boss | `assets/boss` | 1500 | 35 | 3.0 (pha 2 nhanh hơn, có lao tới) |
+| Boss | `assets/boss` | 1300 | 30 | 3.0 (pha 2 nhanh hơn 30%) |
+
+**Vì sao boss đổi chỉ số**: bản cũ (1500 máu, tự lao tới) mạnh nhờ chỉ số: boss chỉ đi thẳng không né vẫn thắng 90% và chưa bị hạ lần nào. Bản hiện tại bỏ cú lao tới viết tay (mọi bước đi do model quyết định) và cho người chơi giả ở màn boss phản xạ 0.3 giây (trước 0.1 giây, ngắm như aimbot khiến né vô ích). Máu boss từng được giảm xuống 700, nhưng mức đó chỉ cân bằng trong sân tập: trong game thật boss thua 40/40 trận, vì người chơi giả trong sân tập bắn M4A1 chậm bằng nửa game (4 so với 8.3 phát/giây) và có nửa số episode chỉ cầm súng lục. Vì vậy ở màn boss người chơi giả giờ luôn cầm M4A1 và bắn đúng tốc độ game (`weapon="m4a1", full_rate=True` trong `config.py`), và máu boss đặt lại 1300: boss đi thẳng thắng ~34%, boss zig-zag viết tay ~67%, boss RL 72-85% (300 episode). Chỉ số `dodge` trong bảng đánh giá = tỉ lệ phát bắn của người chơi giả bị né. Lưu ý: ở màn 3-4 người chơi giả vẫn bắn M4A1 bằng nửa tốc độ game (chưa sửa để giữ kết quả so sánh thuật toán).
 
 ## Phần RL làm gì
 
@@ -85,6 +90,30 @@ Bảng RL (Tab) trong game: vạch vàng là hướng PPO vừa chọn, vòng tr
 `models/eval.csv`: so sánh PPO với 3 baseline (random, chase = đi thẳng, path = đi theo đường ngắn nhất) ở từng màn: tỉ lệ bắt được, bị giết, hết giờ, % thời gian bị ngắm, % bước bị tường chặn, % máu mất. Đây là số liệu cho báo cáo.
 
 `playtest_logs/`: ghi lại cách bạn di chuyển và bắn mỗi lần chơi.
+
+## So sánh thuật toán RL
+
+```powershell
+pip install sb3-contrib                                   # cho TRPO
+python compare_algos.py --baselines                       # đo baseline 1 lần
+python compare_algos.py --algos ppo,a2c,trpo,dqn --seeds 0,1,2,3,4   # 300 episode đánh giá mỗi màn (mặc định)
+python compare_algos.py --report                          # bảng + models/algo_compare.png
+# Chỉnh DQN (mục 5.5 báo cáo): ε0=0,3 khi sang màn, giữ replay buffer, target update 1000 bước
+python compare_algos.py --tag tune --algos dqn,dqn_eps,dqn_buf,dqn_tgt --seeds 10,11,12 --max-level 4  # thử cấu hình
+python compare_algos.py --tag tuned --algos dqn_tgt --seeds 0,1,2,3,4                                 # cấu hình tốt nhất
+```
+
+Mọi thuật toán dùng cùng env, reward, mạng 64x64 và số bước mỗi màn. **Qua màn** = return đánh giá (100 episode, seed cố định) ≥ baseline `path`. **Đạt tới màn** = số màn qua liên tiếp từ màn 1. Kết quả: `models/algo_compare.csv`.
+
+### Xem các thuật toán chạy qua từng màn
+
+```
+python watch_algos.py                    # PPO/TRPO/A2C/DQN chạy cạnh nhau (seed 0), dừng ở màn không qua
+python watch_algos.py --seed 3 --speed 8 --episodes 5
+python watch_algos.py --algos ppo dqn --level 3
+python watch_algos.py --algos dqn dqn_tgt    # DQN mặc định vs DQN đã chỉnh
+```
+Mỗi ô là một thuật toán, cùng danh sách episode. Ô nào trượt `path` (theo `models/algo_compare.csv`, 300 episode) sẽ dừng và ghi "đạt tới màn N". Phím: Space tạm dừng, +/- tốc độ, N bỏ qua episode, Esc thoát.
 
 ## Đánh giá zombie RL bằng agent người chơi
 

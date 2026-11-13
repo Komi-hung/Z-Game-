@@ -27,7 +27,7 @@ import pygame
 from combat import RECOVER
 from config import (RENDER_W, RENDER_H, WINDOW_SCALE, FOV, FPS, MAX_VIEW, MOUSE_SENSITIVITY,
                     PLAYER, BOSS, WEAPONS, LEVELS, SPRITE_WIDTH_FACTOR, LOG_PLAYTEST, PLAYTEST_DIR)
-from game_core import World, Controls, SWITCH_TIME, CONTROLLERS
+from game_core import World, Controls, SWITCH_TIME, CONTROLLERS, ModelBank
 from geometry import cast_ray, line_of_sight, angle_diff
 from sprites import ZombieSprites, WeaponSprites
 from zombie_brain import ACTION_NAMES, move_of, wants_attack
@@ -39,7 +39,7 @@ WEAPON_KEYS = {pygame.K_1: "pistol", pygame.K_2: "m4a1"}
 
 
 class Game:
-    def __init__(self, start_level=1, demo=False, controller="ppo", agent_path=None):
+    def __init__(self, start_level=1, demo=False, controller="ppo", agent_path=None, zombie_dir=None):
         pygame.init()
         self.screen = pygame.display.set_mode((RENDER_W * WINDOW_SCALE, RENDER_H * WINDOW_SCALE))
         pygame.display.set_caption("Zombie RL")
@@ -68,7 +68,7 @@ class Game:
             pygame.mouse.set_visible(False)
             pygame.event.set_grab(True)
             pygame.mouse.get_rel()
-        self.world = World(start_level, controller)
+        self.world = World(start_level, controller, model_bank=ModelBank(zombie_dir) if zombie_dir else None)
         self.last_decision = 0
 
     # Chuyển tiếp thuộc tính để phần vẽ đọc thẳng trạng thái của World
@@ -451,11 +451,15 @@ def main():
                     help="ppo = zombie RL (mặc định), path / chase = zombie viết tay để so sánh")
     ap.add_argument("--watch-agent", nargs="?", const=os.path.join("models", "player_agent.zip"), default=None,
                     help="xem RL agent người chơi tự chơi (mặc định models/player_agent.zip)")
+    ap.add_argument("--zombie-algo", choices=["ppo", "a2c", "trpo", "dqn", "dqn_tgt"], default=None,
+                    help="dùng zombie của thuật toán khác (models/algos/<algo>/seed<s>, tạo bởi compare_algos.py)")
+    ap.add_argument("--zombie-seed", type=int, default=0)
     ap.add_argument("--demo", type=float, default=None, help="tự chơi N giây (để kiểm tra)")
     ap.add_argument("--shot", default=None, help="lưu ảnh màn hình cuối khi chạy --demo")
     args = ap.parse_args()
     Game(args.level, demo=args.demo is not None, controller=args.zombies,
-         agent_path=args.watch_agent).run(args.demo, args.shot)
+         agent_path=args.watch_agent,
+         zombie_dir=os.path.join("models", "algos", args.zombie_algo, f"seed{args.zombie_seed}") if args.zombie_algo else None).run(args.demo, args.shot)
 
 
 if __name__ == "__main__":

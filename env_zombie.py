@@ -85,6 +85,7 @@ class ZombieEnv(gym.Env):
         self.boss = BossMods() if self.ztype == "boss" else None
 
         weapon = str(rng.choice(self.weapons))
+        weapon = self.cfg["bot"].get("weapon", weapon)      # màn boss: luôn M4A1 như người chơi trong game
         kiting = rng.random() < self.cfg["bot"].get("kite", 0.0)
         self.bot = PlayerBot(self.grid, px, py, rng.uniform(-math.pi, math.pi), weapon, self.cfg["bot"], rng,
                              pathfinder=self.pf, kiting=kiting)
@@ -159,5 +160,6 @@ class ZombieEnv(gym.Env):
         info = {"outcome": outcome, "aimed_frac": self.aimed_steps / self.steps,
                 "stuck_frac": self.stuck_steps / self.steps,
                 "hp_lost": 1.0 - max(self.hp, 0.0) / self.max_hp,
-                "hits_dealt": self.hits_dealt}
+                "hits_dealt": self.hits_dealt,
+                "shots": b.shots, "dodged": b.shots - b.shot_hits}
         return self._obs(), float(reward), terminated, truncated, info
